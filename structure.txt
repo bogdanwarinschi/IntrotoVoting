@@ -1,0 +1,58 @@
+Outline target audience, presentation strategy (incremental requirements based on attacks), gap we fill, our emphasis on rigourous models
+
+=======================================================
+
+Motivating example -- Physical realisation using envelopes (FOO-like system). Raise the issue of trust model, security properties
+
+Digital realization -- primitives needed (digital signatures, blind signatures, committment schemes, ideal anomymous channels)
+
+
+FOO realization: description of the processes
+
+==========================================================
+
+
+Homomorphic voting
+
+Motivation?
+
+Asymmetric encryption:
+- homomorphicity
+- security
+
+Minivoting (1 trustee, private, authenticated channels, bulleting board)
+- Syntax
+- Instantiation based on exponent ElGamal
+
+
+Privacy attacks due to malleability: motivate non-mallebility, introduced NM-CPA
+
+Privacy against trustees: threshold ElGamal
+
+==============================================
+
+Verifiability issues: 
+
+Attacks by malicious users, attacks by malicious trustees (inconsistent decryption, malicious keys: privacy)
+
+NIZK as a solution. OR proofs, Chaum-Pedersen
+
+
+=================================================
+
+Putting it all together
+
+================================================
+
+Mix Nets?
+
+
+
+
+
+
+
+
+
+
+
