@@ -2,30 +2,230 @@
 %DB: presume this is the correct class
 
 \usepackage[dvipsnames]{xcolor}
-\newenvironment{outline}{
-    \begin{color}{ForestGreen}
+\newenvironment{structure}{
+  \begin{color}{ForestGreen}
 }{
-    \end{color}
+  \end{color}
 }
+
+\newcommand{\alg}[1]{\textup{\texttt{#1}}}
 
 \begin{document}
 
 \section{Introduction}
 
-\begin{outline}
-Target audience, incremental presentation, purpose of this document.
-\end{outline}
+\begin{structure}
+Outline target audience, presentation strategy (incremental requirements based on attacks), gap we fill, our emphasis on rigourous models
+\end{structure}
 
 This chapter aims to present voting from a cryptographer's point of view. We
 will state some security properties that one could desire of a voting scheme and
 present methods to achieve these properties using cryptography. 
 
-\section{Motivation by example --- a non-cryptographic protocol}
-% DB: probably want a better section title.
+\section{First steps}
 
-\begin{outline}
-paper example, required primitives, FOO
-\end{outline}
+\begin{structure}
+motivating example, realisation (envelopes), security/trust models;
+primitives required for crypto implementation, FOO
+\end{structure}
+
+\subsection{Example}
+
+Here is one way to run a poll. Voters enter a polling station and pick up a voting card on which the candidates standing for election or choices in a referendum are printed. They fill in their card by placing crosses in boxes. Then they take their card and put it in an opaque envelope which they seal. In keeping with the cryptographic constructions we will describe later, we call such an envelope containing a filled in vote card a ``ballot''. This completes the first step, ballot creation.
+
+To cast their ballots, voters present them to an official along with some identification. The official checks that the voter is registered at this polling station and has not cast a vote yet, but the official does not get to see the vote itself. Then the official places the ballot-envelope in a stamping machine and stamps the envelope, in such a way that the imprint of the stamp is not only visible on the envelope but also transferred to the vote card within.
+
+Voters post their ballots to a counting centre. The postal service agrees to send any correctly stamped envelope free of charge from anywhere in the country so voters can post their envelope anonymously in any post box that they choose. 
+The counting centre shuffles all received envelopes again, opens them and counts all vote cards that contain an imprint of the official stamp.
+
+\subsection{Thinking about security}
+
+\subsection{Cryptographic primitives}
+
+\begin{structure}
+\begin{itemize}
+\item digital signatures
+\item blind signatures
+\item commitments
+\end{itemize}
+\end{structure}
+
+\subsubsection{Digital signatures.}
+
+% DB: This is a new section (nothing to copy across like for encryption/PoKs) so
+% I'll try making a first attempt at writing something for it now.
+
+Digital signatures are the cryptographer's replacement for signatures or stamps.
+If we know what someone's signature looks like and believe that it would be hard
+for anyone but the owner to produce such a signature, the presence of such a
+signature on a document attests that the owner has seen and signed it.
+Similarly, the imprint of a stamp on a document attests that someone with the
+appropriate stamp has seen the document.
+
+Digital signatures differ from phyiscal ones in that they are not placed on an
+original document, modifying the original, but are separate objects that can be
+provided alongside the original. As a consequence, to prevent someone from
+transferring a signature from one document to another, digital signatures for
+different documents will be completely different objects.
+
+To be able to create digital signatures, a signer first has to generate a pair
+of keys called the signing key (or secret key) and verification key (or public
+key). To do this, a digital signature scheme defines a key generation algorithm.
+The signing key is like a stamp with which the signer can stamp documents. Such
+a stamp on a document does not mean much on its own (anyone can create their own
+stamps) but if you know what a particular person's or organisation's stamp looks
+like, you can verify any stamped document to see if it was really stamped by the
+person or organisation you know, by comparing the imprint on the document with
+the imprint you know to be theirs. The verification key plays a similar role for
+digital signatures.
+
+A digital signature scheme comes with two more algorithms. The signing algorithm
+takes a document and a signing key as input and returns a signature for the
+document. The verification algorithm takes a document, a signature and a
+verification key and outputs 1 if the signature is valid for the given key and
+document, otherwise 0.
+
+It is the signer's responsibility that all verifiers have an authentic copy of
+the verification key. For example, in some government e-ID card schemes every
+citizen gets a smartcard containing a signing key and the government maintains a
+public database of verification keys. For a digital election, if the election
+authorities need to sign ballots they can publish their verification key as part
+of the election specification.
+
+\begin{definition}
+A digital signature scheme $\Sigma$ is a triple of algorithms
+\[
+\Sigma = \left( \alg{KeyGen}, \alg{Sign}, \alg{Verify} \right)
+\]
+known as the key generation, signing and verification algorithms and satisfying
+the correctness condition below.
+
+The key generation algorithm takes no input and produces a pair of keys $(sk,
+vk) \gets \alg{KeyGen}()$ known as the signing and verification keys. The siging
+algorithm takes a signing key $sk$ and a message $m$ as inputs and produces a
+signature $\sigma \gets \alg{Sign}(sk, m)$. The verification algorithm must be
+deterministic. It takes a verification key $vk$, a message $m$ and a signature
+$\sigma$ as inputs and returns $0$ or $1$. We say that $\sigma$ is a (valid)
+signature for $m$ under key $vk$ if $\alg{Verify}(vk, m, \sigma) = 1$.
+
+A digital signature scheme must satisfy the following correctness condition
+which means that correctly generated signatures are always valid. For any
+message $m$, if you run the following sequence of algorithms then you get $b =
+1$:
+\[
+(sk, vk) \gets \alg{KeyGen}();\ \sigma \gets \alg{Sign}(sk, m);\ b \gets \alg{Verify}(vk, m, \sigma)
+\]
+\end{definition}
+
+This definition tells you what a digital signature scheme is and how to use it
+but does not yet say anything about security. It is common in cryptography to
+define a class of schemes in two parts, keeping functionality and security
+separate. This has many advantages including that we can reason about several
+different levels of security for the same class of schemes.
+
+\subsubsection{Security models.}
+We introduce the cryptographer's viewpoint of security using digital signatures
+as an example. Security means that an attacker can not do certaing things, like
+create a signature on a document that verifies under someone else's key. To
+formalise this, it is common to define a cryptographic game which captures
+exactly what we want an attacker not to be able to do. The security definition
+is then the claim that no attacker can win the given game.
+
+Security games can be defined in three parts. First, the game begins with some
+setup algorithm. Secondly, we give one or more moves that the attacker can play
+in the game. Finally, we state the winning conditions for the attacker.
+
+\subsubsection{Security of digital signatures.}
+An obvious property that signatures should have is that you cannot forges a
+signature on a message that verifies under someone else's key. We call such a
+forgery an existential forgery and we call an attacker that produces such a
+forgery a no-message attacker (we will see why in a moment). The security game
+and notion for this property have the game create a key pair and give the
+adversary the verification key, which is supposed to be public. The adversary
+wins if she produces a forgery:
+
+\begin{definition}
+A digital signature scheme is existentially unforgeable under no-message attacks
+(EF-NMA) if no attacker can win the following game.
+
+    \begin{description}
+    \item[Setup] The game creates a key pair $(sk, vk) \gets \alg{KeyGen}()$ and
+                 saves them; the attacker gets the verification key $vk$.
+
+    \item[Moves] None in this game.
+
+    \item[Winning conditions] The attacker wins the game if she provides a
+    message/ signature pair $(m^*, sk^*)$ such that this pair verifies under the
+    game's key: $\alg{Verify}(vk, m^*, \sigma^*) = 1$.
+    \end{description}
+\end{definition}
+
+This definition is considered necessary but not sufficient. The attacker may be
+a participant in some system using digital signatures in which she gets to see
+messages legitimately signed by some other person; she should still not be able
+to forge anyone else's signature on any message they did not sign. This includes
+such attacks as taking a signature off one message and claiming that the signer
+actually signed some other message. Cryptographers model this with the chosen-
+message attack game. Here the adversary gets an extra move: she may ask the game
+to sign any messages of her choice and wins if she can forge a signature on any
+message that the game did not sign.
+
+\begin{definition}
+A digital signature scheme is existentially unforgeable under chosen message
+attacks (EF-CMA) if no attacker can win the following game.
+
+\begin{description}
+\item[Setup] The game creates a key pair $(sk, vk) \gets \alg{KeyGen}()$ and
+saves them; the attacker gets the verification key $vk$. The game also makes an
+empty list $L$ of signed messages.
+
+\item[Moves] The attacker may, any number of times, send the game a message $m$
+of her choice. The game signs this message producing a signature $\sigma \gets
+\alg{Sign}(sk, m)$, adds $m$ to $L$ and returns $\sigma$ to the attacker.
+
+\item[Winning conditions] The attacker wins the game if she provides a message/
+signature pair $(m^*, sk^*)$ such that (1) this pair verifies under the game's
+key: $\alg{Verify}(vk, m^*, \sigma^*) = 1$ and (2) the game never signed the
+message $m^*$, i.e. $m^* \notin L$.
+\end{description}
+\end{definition}
+
+In neither of the above games would it make any difference if we gave the
+attacker an extra move to verify signatures: she already knows the verification
+key $vk$ so she can do this herself.
+
+\subsubsection{Blind signatures.}
+
+\subsection{The FOO protocol}
+
+\section{Homomorphic Voting}
+
+\subsection{Motivation and example}
+
+\subsection{Asymmetric encryption}
+
+\subsection{Minivoting}
+
+\section{Privacy}
+
+\begin{structure}
+\begin{itemize}
+\item bad ballots (solution: PoKs)
+\item Cortier-Smyth attacks (solution: non-malleable ballots)
+\item Trustee can decrypt individual ballots (solution: threshold)
+\end{itemize}
+\end{structure}
+
+\subsection{Problems}
+
+\subsection{Threshold encryption}
+
+\section{Verifiability}
+
+\section{Putting it all together}
+
+% optional?
+\section{Mix-nets}
 
 \end{document}
 
