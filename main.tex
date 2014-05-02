@@ -194,7 +194,201 @@ In neither of the above games would it make any difference if we gave the
 attacker an extra move to verify signatures: she already knows the verification
 key $vk$ so she can do this herself.
 
+\textcolor{blue}{DB: do UF-CMA too?}
+
 \subsubsection{Blind signatures.}
+Voting is one of several applications where it is useful to be able to sign
+messages without knowing their content. To ensure that only authorized voters
+cast ballots, one could ask voters to authenticate themselves with an authority
+who holds a signing key and signs the ballots of authorized voters.
+Unfortunately, a straightforward use of digital signatures here would reveal
+everyone's votes to the authority. Instead, one can use blind signatures: each
+voter fills in her ballot and blinds it, then authenticates herself to the
+authority that signs the blinded ballot without knowing its contents. The voter
+then turns the signature on the blinded ballot into a signature on the real
+ballot and casts this ballot along with the signature.
+
+Blind signatures will require two security properties. Security for the signer
+requires that no-one can forge signatures on messages that the signer has not
+blind-signed, even though the signer will not usually know which messages she
+has signed. Security for the user (in our case, the voter) requires that the
+signer cannot learn which messages she has signed. We follow Schr\"oder and
+Unruh \cite{US11} in the definition of security properties.
+
+\begin{definition}
+A blind signature scheme $BS$ is a tuple of algorithms
+\[
+BS = \left(
+\alg{KeyGen}, \alg{User}, \alg{Signer}, \alg{Verify}
+\right)
+\]
+The key generation algorithm takes no input and returns a pair of keys $(sk, vk)
+\gets \alg{KeyGen}$ called the signing and verification keys. \alg{User} and
+\alg{Signer} are a pair of interactive algorithms. The user algorithm takes a
+message $m$ as input, the signer algorithm takes a signing key $sk$ as input.
+When these two algorithms interact, the user gets a signature $\sigma \gets
+[\alg{User}(m), \alg{Signer}(sk)]$ and the signer gets no output.
+The verification algorithm is determinstic and takes a verification key, message
+and signature as input and outputs 0 or 1. We call a signature $\sigma$ valid
+for message $m$ and key $vk$ if $\alg{Verify}(vk, m, \sigma) = 1$.
+
+A blind signature scheme $BS$ must have the following correctness property: for
+any message $m$, running
+\[
+(sk, vk) \gets \alg{KeyGen}();\ \sigma \gets [\alg{User}(m), \alg{Signer}(sk)];\ 
+b \gets \alg{Verify}(vk, m, \sigma)
+\]
+returns $b = 1$.
+\end{definition}
+
+\begin{definition}
+A blind signature scheme is unforgeable (secure for the signer) if no attacker
+can win the following game.
+
+\begin{description}
+\item[Setup] The game creates a key pair $(sk, vk) \gets \alg{KeyGen}$ and saves
+them. It also creates a list $L$ of signed messages which starts out empty. The
+attacker gets $vk$.
+
+\item[Moves] The attacker may submit a message $m$ for signing as long as
+$m \notin L$. The game runs $\sigma \gets [\alg{User}(m), \alg{Signer}(sk)]$,
+adds $m$ to $L$ and returns the signature $\sigma$. The attacker may use this
+move as many times as she likes.
+
+\item[Winning conditions] The attacker wins if she can output a list of message/
+signature pairs
+\[
+((m_1, \sigma_1), (m_2, \sigma_2), \ldots, (m_{k+1}, \sigma_{k+1}))
+\]
+satisfying the following conditions: (1) all messages are distinct: $m_i \neq m_j$
+for all pairs $(i, j)$ with $i \neq j$ (2) all pairs verify i.e.
+$\alg{Verify}(vk, m_i, \sigma_i) = 1$ for all $i$ and
+(3) the attacker has made at most $k$ signature moves, i.e. fewer than the number
+of messages she returns.
+\end{description}
+\end{definition}
+
+The list $L$ here serves a slightly different purpose than for plain digital
+signatures: it prevents the attacker from submitting the same message twice. The
+winning condition is that the attacker has produced signatures on more messages
+than she has used in signing moves, so at least one of her output pairs is a
+genuine forgery. The reason for this formulation is that some blind signature
+schemes allow you to take a message signature pair $(m, \sigma)$ and create a
+new signature $\sigma' \neq \sigma$ on the same message such that $(m, \sigma')$
+is still a valid message/signature pair on the same key.
+
+The definition of blindness is a so-called indistinguishability game. Here, an
+attacker's success cannot be measured in a single experiment but only as the
+probability that an attacker is successful on average. The game will start by
+picking a bit $b$ and will act differently depending on the bit. The attacker's
+aim is to guess the bit $b$ and the security definition says that the attacker
+cannot do better than guess at random.
+
+In the blindness game, the attacker takes the role of the signer. She may
+interact with two users bringing messages of the attacker's choice to be signed;
+her aim is to guess which order the users come in.
+
+\begin{definition}
+A blind signature scheme is blind (secure for the user) if no attacker can guess
+the bit $b$ in the following game with better probability than one half.
+
+\begin{description}
+\item[Setup]
+The game picks a bit $b$ at random from the set $\{0, 1\}$.
+
+\item[Moves]
+The attacker has only one move and she may use it only once. First, the attacker
+may send the game a verification key $vk$. The attacker may then choose a pair
+of messages $(m_0, m_1)$ and send them to the game. The game starts two user
+processes, the first one for $m_b$ and the second one for $m_{1-b}$, both of
+which interact with the attacker (who takes the role of signer, but may do
+anything she likes). If this results in both users getting a valid signature,
+the attacker gets the signatures $(\sigma_0, \sigma_1)$ on $m_0$ and $m_1$
+respectively.
+
+\item[Winning conditions]
+The adversary may make a guess for $b$ at any time. This stops the game.
+The adversary wins if the guess is correct.
+\end{description}
+\end{definition}
+
+\subsubsection{Commitment schemes.}
+A commitment scheme is the cryptographer's equivalent of placing a message in an
+opaque envelope and placing this envelope on the table: no-one else can can read
+your message until you open the envelope but you cannot change the message that
+you have placed in the envelope either: you are committed to the message.
+
+\begin{definition}
+A commitment scheme $CS$ is a pair of algorithms
+\[
+CS = \left( \alg{Commit}, \alg{Open}\right)
+\]
+called the commitment and opening algorithm. The commitment algorithm takes a
+message $m$ and returns a commitment $c$ and an opening key $k$: $(c, k) \gets
+\alg{Commit}(m)$. The opening algorithm takes a message $m$, a commitment $c$
+and a key $k$ and returns a bit $b$ to indicate whether the commitment matches
+the message: $b \gets \alg{Open}(m, c, k)$. The opening algorithm must be
+deterministic.
+
+A commitment scheme must satisfy the following correctness property. For any
+message $m$, if you run
+\[
+(c, k) \gets \alg{Commit}(m);\ b \gets \alg{Open}(m, c, k)
+\]
+then $b = 1$ i.e. correctly commited messages also open correctly.
+\end{definition}
+
+Security of commitment schemes has two parts. A commitment is hiding if you
+cannot extract a committed message from a commitment until it is opened. A
+commitment is binding if you cannot change it once committed.
+
+In more detail, the hiding property says that for any two messages of your
+choice, if you are given a commitment to one of them then you cannot guess
+better than at random which message was committed to.
+
+\begin{definition}
+A commitment scheme $CS = (\alg{Commit}, \alg{Open})$ is hiding if no attacker
+can win the following game with better probability than one half. If we consider
+attackers with unbounded computation power, we can call a scheme perfectly
+hiding; for attackers with reasonable (polynomially bounded) power we can call a
+scheme computationally hiding.
+
+\begin{description}
+\item[Setup]
+The game picks a bit $b$ at random.
+
+\item[Moves]
+The attacker may, once only, send a pair of messages $m_0, m_1$. The game runs
+$(c, k) \gets \alg{Commit}(m_b)$ and returns $c$ to the attacker.
+
+\item[Winning conditions]
+The attacker wins if she guesses $b$. A guess stops the game.
+\end{description}
+\end{definition}
+
+The binding property asks the attacker to produce one commitment $c$ and two
+different messages $m, m'$ to which she can open the commitment, i.e. keys
+$k, k'$ (which may or may not be the same) such that \alg{Open} returns 1 on
+both triples involved.
+
+\begin{definition}
+A commitment scheme $CS = (\alg{Commit}, \alg{Open})$ is binding if no attacker
+can win the following game. The same specialisation into perfectly and
+computationally binding applies as for the hiding property.
+
+\begin{description}
+\item[Setup]
+No setup.
+
+\item[Moves]
+No moves.
+
+\item[Winning conditions]
+The attacker may provide a string $c$, two messages $m, m'$ and two keys
+$k, k'$. She wins if (1) $m \neq m'$ and (2) both $\alg{Open}(c, m, k)$ and
+$\alg{Open}(c, m', k')$ return 1.
+\end{description}
+\end{definition}
 
 \subsection{The FOO protocol}
 
@@ -226,6 +420,19 @@ key $vk$ so she can do this herself.
 
 % optional?
 \section{Mix-nets}
+
+\begin{thebibliography}{XXX11}
+\bibitem[FOO92]{FOO92]
+A. Fujioka, T. Okamoto and K. Ohta.
+A Practical Secret Voting Scheme for Large Scale Elections.
+In: ???
+
+\bibitem[US11]{US11}
+D. Schr\"oder and D. Unruh.
+Security of Blind Signatures Revisited.
+eprint, report 2011/316.
+
+\end{thebibliography}
 
 \end{document}
 
