@@ -522,6 +522,108 @@ counter adds the vote $v$ to the set of valid votes. Finally, the counter
 tallies all valid votes.
 \end{description}
 
+\subsubsection{Verifiability of FOO.}
+
+We will briefly show why FOO is a verifiable protocol. Specifically, we check
+the following properties.
+
+\begin{description}
+\item[Individual verifiability] Voters can check that their ballot was counted.
+\item[Universal verifiability] Anyone can check that all ballots were counted
+ correctly.
+\item[Ballot verifiability] Anyone can check that all ballots correspond to
+ correct votes.
+\item[Eligibility verifiability] Anyone can check that only eligible voters have
+voted, and only once each.
+\end{description}
+
+For individual verifiability, since the counter just publishes all ballots the
+voter can check if her ballot is included among the published ones. Better
+still, in case of a dispute the voter can expose a cheating counter if the
+counter refuses to accept a correctly signed ballot.
+
+Universal verifiability is easy since the counter holds no secrets: anyone can
+repeat the count of all opened ballots. The same holds for ballot verifiability
+since the ballots are opened individually.
+
+For eligiblility, first note that anyone can verify that only correctly signed
+ballots are counted. If we assume that the authority is honest then only
+eligible voters will receive a signature from the authority and only once each.
+Even if the authority is dishonest, its log $L$ would show if it had ever blind-
+signed a ballot that was not accompanied by a correct signature from a
+legitimate voter key, or if the authority had signed two ballots with a
+signature from the same voter.
+
+\subsubsection{Dispute resolution in FOO.}
+
+In addition to verifiability, the FOO protocol provides a digital audit trail
+that can be used to resolve many disputes which could arise. We mention some
+cases that were addressed in the original paper; we imagine that all these
+disputes could be brought before a judge or election official.
+In the following we assume that honest parties' keys are not available to
+cheaters. This means that in any dispute between a honest and a dishonest party,
+the honest party will be able to convince a judge that the other side is
+cheating - more precisely, that either the other side is cheating or her
+signature has been forged.
+In the following we give a list of possible accusations and how a judge should
+respond.
+
+\begin{itemize}
+\item The authority refuses to give a legitimate voter a signature, or provides
+her with an invalid signature.
+
+The voter can publish a blinded ballot and her digital signature on it;
+a judge can now ask the authority to either sign this ballot or give a reason
+for refusing to do so. If the judge asks to see the authority's blinded
+signature, the voter can reveal her vote and blinding factor to the judge who
+can then check the unblinding step and verify the resulting signature.
+This way, a cheating authority will always be exposed.
+
+\item The authority claims that a voter has already voted.
+
+A judge can ask for the voter's previous blinded ballot and digital signature as
+proof. If the authority fails to produce this, she is exposed - if she does
+produce this, the voter must explain why said blinded ballot carries a signature
+under her key.
+
+\item The authority signs a ballot that does not come from a legitimate voter,
+or more than one ballot from the same voter.
+
+The judge checks the counter's published ballots against the authority's list
+$L$ for any signed ballots that do not have a valid voter-signature in $L$, or
+two ballots with the same voter's signature.
+
+\item The authority signs something that is not a legitimate ballot.
+
+If the illegitimate ballot is never opened, it does not contribute to the result
+and can be ignored. Once a ballot is opened, the judge can check its contents.
+It is not the authority's fault if its signature is discovered on an invalid
+ballot: since the authority's signature is blind, the authority has no way of
+knowing the contents of what it signs.
+
+\item A voter tries to vote more than once.
+
+The judge checks that all the counter's ballots are also referenced in the list
+$L$ and then checks the list $L$ for two different ballots with the same voter's
+signature.
+
+\item The counter refuses to accept a legitimate ballot.
+
+The judge checks the signature on the disputed ballot; if it verifies and the
+counter still refuses then the counter is exposed as a cheater. The same applies
+to opening keys $k$ where the judge checks using the opening algorithm.
+
+\item The counter accepts an illegitimate ballot without a valid signature).
+
+The judge checks the signature; if it fails the counter is exposed as a cheater.
+The same applies to opening information.
+
+\item The counter produces a false result.
+
+The judge recomputes the result and disqualifies the counter if the results do
+not match.
+\end{itemize}
+
 \section{Homomorphic Voting}
 
 \subsection{Motivation and example}
