@@ -312,6 +312,54 @@ The adversary wins if the guess is correct.
 \end{description}
 \end{definition}
 
+\subsubsection{Explicit form of blind signatures.}
+The above definition of blind signatures applies to many different schemes.
+Some of these schemes have a more explicit form however that is easier to work
+with in cryptographic proofs. We follow the presentation of Fujoka et al. \cite{FOO92} since we are working towards their voting protocol; a blind signature scheme that has an explicit form is for example the one of Chaum \cite{C85}.
+
+\begin{definition}
+A blind signature scheme in explicit form is a tuple
+\[
+BS = \left( \alg{KeyGen}, \alg{Blind}, \alg{Sign}, \alg{Unblind}, \alg{Verify} \right)
+\]
+of algorithms where \alg{Verify} is deterministic and the rest may be
+randomized. The key generation algorithm outputs a keypair $(sk, vk) \gets
+\alg{KeyGen}()$. The blinding algorithm takes a message $m$ and a verification
+key $vk$ and outputs a blinded message $b$ and an unblinding factor $u$: $(b, u)
+\gets \alg{Blind}(m, vk)$. The signing algorithm takes a signing key $sk$ and a
+blinded message $b$ and outputs a blinded signature $s \gets \alg{Sign}(b, sk)$.
+The unblinding algorithm takes a verification key $vk$, a blinded signature $s$
+and an unblinding factor $u$ and outputs a signature $\sigma \gets
+\alg{Unblind}(vk, s, u)$. The verification algorithm finally takes a
+verification key $vk$, a message $m$ and a signature $\sigma$ and outputs a bit
+$v \gets \alg{Verify}(vk, m, \sigma)$ that is 1 if the signature verifies.
+
+A blind singature scheme in explicit form is correct if the following outputs $v
+= 1$ for any message $m$, i.e. a correctly generated signature verifies:
+\[
+\begin{array}{l}
+(sk, vk) \gets \alg{KeyGen}();\ 
+(b, u) \gets \alg{Blind}(vk, m);\ 
+s \gets \alg{Sign}(sk, b);\ \\
+\sigma \gets \alg{Unblind}(vk, s, u);\ 
+v \gets \alg{Verify}(vk, m, \sigma)
+\end{array}
+\]
+\end{definition}
+
+From the explicit form we can reconstruct the signer and user algorithms: the
+signer algorithm receives a blinded message from the user, applies $\alg{Sign}$
+with the signing key $sk$ and sends the result back to the user. The user
+algorithm applies \alg{Blind} to the message, saves the unblinding factor $u$
+and sends the blinded message $b$ to the signer; when the user algorithm gets a
+value $s$ back from the signer it applies \alg{Unblind} using the saved factor
+$u$ and outputs the resulting blind signature (to its caller, not the signer).
+
+From this observation we could derive explicit forms of the the security games
+for blind signatures in explicit form and check that the correctness conditions
+in the two cases match up. The other way round is not possible in general as not
+all blind signature schemes have an explicit form the way we defined it.
+
 \subsubsection{Commitment schemes.}
 A commitment scheme is the cryptographer's equivalent of placing a message in an
 opaque envelope and placing this envelope on the table: no-one else can can read
@@ -392,6 +440,88 @@ $\alg{Open}(c, m', k')$ return 1.
 
 \subsection{The FOO protocol}
 
+The cryptographic tools we introduced above allow us to give the voting scheme
+presented by Fujioka, Okamoto and Ohta at Auscrypt 1992 \cite{FOO92}. This
+scheme was also the one that we motivated in the informal example above and has
+the convenient abbreviation FOO.
+
+The FOO protocol uses two administrators, a counter who publishes all ballots
+sent to her and an authority who checks voters' elegibility and can produce
+blind signatures. Voters must be able to talk anonymously to the counter; this
+requirement could be achieved with cryptographic tools that we will introduce
+later such as mix-nets.
+
+The FOO protocol assumes that there is some public-key infrastructure in place
+in which each voter has a digital signature keypair and the association of
+verification keys to voters is public. FOO requires each voter to perform four
+steps:
+\begin{enumerate}
+\item Prepare a ballot on her own, sign it and save a private random value.
+\item Authenticate herself to the authority and get a blind signature on the ballot.
+\item Submit the ballot and authority signature anonymously to a ballot counter (this is equivalent to publishing the ballot).
+\item After voting has closed, submit the private random value from step 1 to the counter, also anonymously.
+\end{enumerate}
+
+\begin{definition}
+The FOO protocol is the following protocol for voters, an authority and a counter.
+\end{definition}
+
+\begin{description}
+\item[Tools] The FOO protocol requires a digital signature scheme $\Sigma$, a
+blind signature scheme $BS$ with an explicit form and a commitment scheme $CS$.
+We write algorithms with the scheme name as prefix, for example $BS.\alg{Sign}$,
+to avoid ambiguity.
+
+\item[Voter] The voter starts out with a digital signature keypair $(sk_V,
+vk_V)$ for $\Sigma$, a vote $v$ and the authority's blind signature
+verification key $vk_A$.
+\begin{enumerate}
+\item She creates a commitment $(c, k) \gets CS.\alg{Commit}(v)$, blinds it as
+$(b, u) \gets BS.\alg{Blind}(vk_A, c)$ and signs this as $\sigma_V \gets
+\Sigma.\alg{Sign}(sk_V, b)$.
+\item She then sends $(ID_V, b, \sigma_V)$ to the authority and expects a
+blinded signature $s$ in return. Here $ID_V$ is some string describing the
+voter's identity.
+\item On receipt of $s$, she creates the blind signature $\sigma_A \gets \alg{Unblind}(vk_A, s, u)$ and sends her ballot $(c, \sigma_A)$ anonymously to the counter. The counter replies with some random identifier $i$.
+\item After voting has closed and the counter has invited the voters to open
+their ballots, the voter sends $(i, v, k)$ anonymously to the counter.
+\end{enumerate}
+
+\item[Authority]
+The authority has a keypair $(sk_A, vk_A)$ for a blind signature scheme. She
+also has access to a table $T$ of the identities and verification keys of all
+eligible voters: $(ID_V, vk_V)$ for all voters $V$.
+Further, the authority has a list $L$ of the identities, blinded ballots
+and signatures of all voters who have already voted (this list starts out empty
+of course).
+When a voter sends the authority a triple $(ID_V, b, \sigma_V)$ the
+authority checks that the voter is eligible to vote, i.e. $ID_V \in T$, and retrieves the corresponding verification key $vk_V$.
+The authority then checks that the signature is valid: $\Sigma.\alg{Verify}(vk_V, b, \sigma_V) = 1$. If this is correct, the authority checks that the voter has not already voted, i.e. $ID_V$ does not appear in $L$.
+The authority then adds $(ID_V, b, \sigma_V)$ to $L$ and returns a blind
+signature $s \gets BS.\alg{Sign}(sk_A, b)$ to the voter.
+
+At the end of the voting phase, the authority publishes the list $L$.
+
+\item[Counter]
+The counter starts out with the authority's verification key $vk_A$.
+The counter holds no secrets and performs no secret operations: the entire
+protocol for the counter can be performed in public and therefore checked by
+anyone.
+
+During the voting phase, the counter anonymously receives ballots $(c, \sigma)$.
+She checks that each incoming ballot is valid, i.e. $BS.\alg{Verify}(vk_A, c,
+\sigma) = 1$ and publishes all accepted ballots along with their signatures and
+a unique identifier $i$, i.e. the counter maintains a list of entries $(i, c,
+\sigma)$. The identifiers could be randomly chosen or simply sequence numbers.
+
+At the end of the election, the counter invites all voters to open their
+ballots. On receipt of an anonymous message $(i, v, k)$ the counter retrieves
+the entry $(i, c, \sigma)$ and if such an entry exists, she computes $x \gets
+CS.\alg{Open}(v, c, k)$. If this returns $1$, the ballot is valid and the
+counter adds the vote $v$ to the set of valid votes. Finally, the counter
+tallies all valid votes.
+\end{description}
+
 \section{Homomorphic Voting}
 
 \subsection{Motivation and example}
@@ -422,7 +552,7 @@ $\alg{Open}(c, m', k')$ return 1.
 \section{Mix-nets}
 
 \begin{thebibliography}{XXX11}
-\bibitem[FOO92]{FOO92]
+\bibitem[FOO92]{FOO92}
 A. Fujioka, T. Okamoto and K. Ohta.
 A Practical Secret Voting Scheme for Large Scale Elections.
 In: ???
