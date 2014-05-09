@@ -361,6 +361,119 @@ for blind signatures in explicit form and check that the correctness conditions
 in the two cases match up. The other way round is not possible in general as not
 all blind signature schemes have an explicit form the way we defined it.
 
+We now turn our attention to a possible implementation of standard and blind
+digital signatures based on the famous RSA construction.
+
+\subsubsection{RSA.}
+In 1978, Rivest, Shamir and Adleman constructed the first public-key encryption
+scheme \cite{RSA78}. In 1985, Chaum used RSA to propose and construct a blind
+signature scheme which we will present in the next section; let us first
+describe the RSA construction.
+
+Pick two prime numbers $p, q$ and multiply them together to get $N = pq$. The
+RSA construction lives in the ring $\mathbb Z^*_N$: the elements are the
+integers $\{1, 2, \ldots, N-1\}$ with the operation of multiplication modulo
+$N$. This ring is not a field ($p$, $q$ are zero-divisors after all) but for
+large $N$, if we pick a random element $x$ from $\{1, \ldots, N-1\}$ the chance
+of hitting a non-invertible element is small. One idea behind RSA is that if you
+know $N$ but not $p$ and $q$, you can treat $\mathbb Z^*_N$ as if it were a
+field. Specifically, you can try and invert any element with Euclid's algorithm
+and if you find a non-invertible element then you can factor $N$ (you've found a
+multiple of $p$ or $q$ that's coprime to the other factor of $N$) and vice
+versa. Factoring is arguably the most famous computationally hard problem in
+mathematics; lots of research has gone into number-theoretic siveing algorithms
+to aid in factoring large numbers and the current record for a number $N$ of the
+kind used in RSA is the number 
+\[\begin{array}{rl}
+\textrm{RSA-768} = & 
+12301866845301177551304949583849627207728535695953 \\ &
+34792197322452151726400507263657518745202199786469 \\ &
+38995647494277406384592519255732630345373154826850 \\ &
+79170261221429134616704292143116022212404792747377 \\ &
+94080665351419597459856902143413 \\
+\end{array}\]
+which has 768 bits when written in binary and was factored in December 2009.
+Current RSA key length recommendations\footnotemark are to use keys of at least
+1024 bits if not 2048.
+\footnotetext{In practice there are further restrictions on the type of $p$ and
+$q$ you must choose, such that $(p-1)/2$ and $(q-1)/2$ should also be prime to
+avoid particular number-theoretic factoring tricks; we will not go into details
+of these matters here.}
+
+If you pick an element $x \in \mathbb Z^*_N$ coprime to $N$ (not a multiple of
+$p$ or $q$) and look at the subgroup $\{x^k \pmod{N} \mid k \in \mathbb N\}$
+that it generates then this subgroup has order exactly $(p-1)(q-1)$, i.e.
+$x^{(p-1)(q-1)} = 1 \pmod{N}$. The RSA construction makes use of exponentiation
+modulo $N$ as its basic operation. The idea is that if you pick a pair of
+integers $e, d$ satisfying $e \cdot d = 1 \pmod{(p-1)(q-1)}$ then for any
+invertible $x \in \mathbb Z^*_N$ the equation $(x^e)^d = x^{e \cdot d} = x
+\pmod{N}$ holds, i.e. exponentiating with $e$ and $d$ are mutually inverse
+operations. Crucially, given $N$ and any $e$ that is coprime to $N$, it is
+considered hard to find the corresponding $d$ or to compute $x^d \pmod{N}$ for
+random $x$. A cryptographer would say that $x \mapsto x^e \pmod{N}$ is a
+trapdoor one-way function: one-way because it is easy to compute yet hard to
+invert; ``trapdoor'' because given $d$ it becomes easy to invert. Upon such a
+function one can construct much of modern cryptography.
+While it is clear that if you can factor $N$ you can also find the $d$ value
+for any $e$, the other direction is less clear. However, RSA has stood the test
+of time in that no-one has managed to attack properly generated RSA keys of
+decent key sizes, either through factoring or any other means, since the system
+was first proposed.
+
+\textcolor{Fuchsia}{Is this correct?}
+
+To generate an RSA keypair (whether for encryption, signing or many other
+applications), the key generation algorithm \alg{KeyGen} performs the following
+steps:
+\begin{enumerate}
+\item Pick large enough primes $p$ and $q$ and compute $N = pq$. The bitlength
+of $N$ is your key length.
+\item Pick any unit $e$ of $\mathbb Z^*_N$ --- choices such as $e = 3$ or $e =
+2^{16}+1$ are common as they are efficient to work with.
+\item Find $d$ such that $ed = 1 \pmod{(p-1)(q-1)}$ (since you know $p, q$ this
+can be done with a variation on Euclid's algorithm).
+\item Your public key is the pair $(N, e)$. People can share $e$ but everyone
+gets their own $N$. Your private key is the tuple $(N, e, d, p, q)$ --- most of
+the time, the pair $(N, d)$ suffices to work with though.
+\end{enumerate}
+
+\textcolor{Fuchsia}{Is $2^{16}+1$ the common $e$? CHECK.}
+
+\subsubsection{RSA signatures and blind signatures.}
+To sign a message $m \in \mathbb Z^*_N$ (without blinding) with a RSA private
+key $(N, d)$ and public key $(N, e)$, you compute
+\[
+\alg{Sign}((N, d), m) := m^d \pmod{N}
+\]
+and to verify a signature $\sigma$, check that the following returns $1$:
+\[
+\alg{Verify}((N, e), m, \sigma) :=
+\left\{ \begin{array}{lll}
+1, & \textrm{if} & \sigma^e = m \pmod{N} \\
+0, & \textrm{otherwise} & \\
+\end{array} \right.
+\]
+
+Chaum's blind signature has the user blind the message $m$ with a random value
+$r$ before sending it to the signer and strip this factor out again afterwards:
+
+\begin{description}
+\item[\alg{KeyGen}:] Standard RSA key generation.
+\item[\alg{Blind}$((N, e), m)$:] pick a random $r$ from $\mathbb Z^*_N$ and set
+$b := m \cdot r^e \pmod{N}$, $u := r$.
+\item[\alg{Sign}:] as for the basic RSA signature.
+\item[\alg{Unblind}$((N, e), s, u)$:] Compute $\sigma := s/u \pmod{N}$.
+\item[\alg{Verify}:] as for the basic RSA signature.
+\end{description}
+
+Let us check correctness of the blind signature. We have
+\[
+\sigma^e = (s/u)^e = ((m \cdot r^e)^d)^e = m^{e \cdot d} (r^{e \cdot d})^e =
+1 \cdot 1^e = 1 \pmod{N}
+\]
+Note that $\sigma$ is exactly the standard RSA signature on $m$ for verfication
+key $(N, e)$.
+
 \subsubsection{Commitment schemes.}
 A commitment scheme is the cryptographer's equivalent of placing a message in an
 opaque envelope and placing this envelope on the table: no-one else can can read
