@@ -1,6 +1,7 @@
 \documentclass{llncs}
 %DB: presume this is the correct class
 
+\usepackage{amsfonts}
 \usepackage[dvipsnames]{xcolor}
 \newenvironment{structure}{
   \begin{color}{ForestGreen}
@@ -626,11 +627,177 @@ not match.
 
 \section{Homomorphic Voting}
 
+The FOO protocol from the last section scores well on privacy, verifiability and
+dispute resolution but has one major drawback: voters need to interact with the
+voting system at two different times, once to cast their ballot and once again
+after the voting period has ende to open their ballot. A different approach to
+cryptographic voting voting removes this drawback.
+
 \subsection{Motivation and example}
+
+Here is another sketch of a ``physical'' voting protocol. Consider a yes/no
+referendum. Each voter gets two balls of the same size and appearance except
+that one weighs 1 lb\footnotemark and the other 2 lb. To vote no, the voter
+writes her name on the lighter of two balls and places it on a tray; to vote yes
+she does the same for the heavier one. This allows anyone to check that only
+eligible voters have voted and only once each by comparing the names on the cast
+ball(ot)s with a list of eligible voters. To tally the election, one first
+counts the number of balls cast, then weighs the entire tray and derives the
+number of light and heavy balls from the total amount and weight of the balls.
+This way, the amount that each individual ball(ot) contributed to the tally is
+hidden from everyone except the voter who cast it. One point that we will have
+to take care of in the cryptographic protocol based on this idea is how we
+prevent a voter from casting a forged ball weighing more than 2 lb to gain an
+unfair advantage.
+
+The cryptographic tool that we will use to build the equivalent of the balls
+above goes by the name of ``homomorphic asymmetric encryption''. The adjective
+homomorphic describes a scheme where individual elements (namely ciphertexts)
+can be combined in such a way that the combined elements allow the same
+operations as the individual ones, and the operations on the combined element
+reflects the way you combined them. In the example above, you can weigh a tray
+full of balls just like you can weigh an individual ball and the weight of the
+full tray (minus the weight of the tray itself) is the sum of the weights of all
+the individual balls.
+
+Before we can define homomorphic asymmetric encryption, we first need to define
+what asymmetric encryption is in the first place.
+
+\footnotetext{One pound, abbreviated lb, is around 0.454 kg.}
 
 \subsection{Asymmetric encryption}
 
+Asymmetric or ``public key'' encryption is perhaps the best-known invention of
+modern cryptography. It is certainly one of the oldest: it was first suggested
+by Diffie and Hellman in 1976 \cite{DH76} and implemented successfully by
+Rivest, Shamir and Adleman in 1978 \cite{RSA78}.
+
+There are many ways to explain asymmetric encryption using physical terms: our
+favourite example is a letter-box. Anyone can send you letters by placing them
+in your letter-box but only you can get letters out of the box again\footnotemark. Indeed, once someone has placed a letter in your letter-box, even
+they can't get it out again.
+
+\footnotetext{The design of letter-boxes varies a lot between countries; we have
+in mind the continental European style where letterboxes have a flap to insert letters and the owner can open a door on the letter-box with a key to retrieve letters.}
+
+As for digital signatures, we
+define the types of algorithms required and the security requirements.
+
+\begin{definition}
+An asymmetric encryption scheme $E$ is a triple of algorithms
+\[ E = \left(
+\alg{KeyGen}, \alg{Encrypt}, \alg{Decrypt}
+\right) \]
+where the key genration algorithm takes no input and returns a pair $(pk, sk)
+\gets \alg{KeyGen}()$ known as the public and secret key. The encryption
+algorithm takes a public key $pk$ and a message $m$ and returns a ciphertext $c
+\gets \alg{Encrypt}(pk, m)$. The decryption algorithm takes a secret key $sk$
+and a ciphertext $c$ and outputs either a decrypted message $d \gets
+\alg{Decrypt}(sk, c)$ or declares the ciphertext invalid, which we indicate with
+the special output symbol $\bot$. The decryption algorithm must be deterministic.
+
+The correctness condition is that for any message $m$, the following operations
+result in $d = m$:
+\[
+(pk, sk) \gets \alg{KeyGen}();\ 
+c \gets \alg{Encrypt}(pk, m);\ 
+d \gets \alg{Decrypt}(sk, c)
+\]
+\end{definition}
+
+\subsubsection{Security of encryption.}
+It took the community of cryptographers some time to come up with the definitions
+of security for asymmetric encryption that are in use today. The first obvious condition --- given a ciphertext you should not be able to tell the contained message --- is unfortunately insufficient. Here is an example why.
+Alice, a famous cryptographer, wishes to announce the birth of her child to her family while keeping its gender secret from the world at large for now. Eve, an eavesdropper from the press, obtains Alice's ciphertext. Eve may be able to guess that the message is either ``It's a boy!'' or ``It's a girl!''. It is not enough for Alice if Eve is unable to decrypt ciphertexts of completely unknown messages, Eve should not even be able to tell which of two particular messages (both of which Eve can guess) Alice chose to encrypt.
+
+Further, suppose this is Alice's second child and her last child was a girl. If Eve can compare Alice's ciphertext with the ciphertext she sent to her family to announce the birth of her last child and the two ciphertexts turn out to be identical, Eve might be able to conclude that Alice encrypted the same message both times without ever decrypting anything. If Alice is using an asymmetric scheme, Eve can even encrypt any messages she likes herself under Alice's family's public keys and compare the ciphertexts to the one sent by Alice. So another condition on asymmetric encryption must be that if you encrypt the same message twice, you get different ciphertexts each time and if you are given two ciphertexts, you cannot tell whether they encrypt the same message or not.
+
+The first security requirement for encryption is known as indistinguishability
+under chosen plaintext attack, abbreviated IND-CPA. Here, the attacker mey chose
+any two messages, send them to the security game and get an encryption of one of
+them back; a scheme is called IND-CPA secure if she cannot tell which message
+the security game chose to encrypt.
+
+\begin{definition}
+An asymmetric encryption scheme $E$ is IND-CPA secure if no attacker can win the
+following game with better probability than $1/2$, the probability of guessing
+at random.
+
+\begin{description}
+\item[Setup] The game creates a keypair $(pk, sk) \gets \alg{KeyGen}()$ and
+gives the attacker the public key $pk$. The game also picks a bit $b$ randomly
+from $\{0, 1\}$ and keeps this secret.
+\item[Moves] Once in the game, the attacker may pick a pair of messages $m_0$
+and $m_1$ and send them to the game. The game encrypts $c \gets \alg{Encrypt}
+(pk, m_b)$ and returns this to the attacker.
+\item[Winning conditions.] The attacker may make a guess at $b$ which ends the
+game. The attacker wins if she guesses correctly.
+\end{description}
+\end{definition}
+
+\textcolor{Fuchsia}{Introduce NM and CCA here? Put instantiation (ElGamal) here or in separate section?}
+
+\subsection{Homomorphic encryption.}
+A homomorphic encryption scheme offers an additional algorithm \alg{Add} that takes two ciphertexts and a public key and produces a new ciphertext for the ``sum'' of the two messages in the original ciphertexts. We put ``sum'' in quotes because the principle can be applied to different operations such as multiplication as well.
+
+\begin{definition}
+An asymmetric encryption scheme $E$ is homomorphic if there are these additional operations:
+
+\begin{itemize}
+\item An operation $+$ on the message space.
+\item An algorithm \alg{Add} that takes a public key $pk$ and two ciphertexts $c_1, c_2$ and outputs another ciphertext $s$.
+\end{itemize}
+
+The correctness condition is that for any messages $m_1, m_2$ the following returns $d = m_1 + m_2$:
+\[
+\begin{array}{l}
+(pk, sk) \gets \alg{KeyGen}();\ 
+c_1 \gets \alg{Encrypt}(pk, m_1);\ 
+c_2 \gets \alg{Encrypt}(pk, m_2);\ \\
+c \gets \alg{Add}(pk, c_1, c_2);\ 
+d \gets \alg{Decrypt}(sk, c)
+\end{array}
+\]
+
+Further, if $c_1, c_2$ are ciphertexts for $m_1, m_2$ as above and $c$ is obtained as $c \gets \alg{Add}(pk, c_1, c_2)$ then not only is $c$ a ciphertext for $m_1 + m_2$ but for some choice of random values, $\alg{Encrypt}(pk, m_1 + m_2)$ could directly produce $c$.
+\end{definition}
+
+The last condition says that summed ciphertexts have the same form as ones encrypted directly. This prevents the following degenerate construction: a ``ciphertext'' is a list of ciphertexts, the encryption algorithm returns a list with one element and \alg{Add} just returns a list containing its two input ciphertexts. The decryption algorithm takes a list, decrypts each element individually and returns the sum of all decryptions.
+
+\textcolor{Fuchsia}{What we actually want is that a sum-ciphertext hides how it was made. The fully formal definition over finite groups does this via the argument that if you perform a group operation with a uniform group element, the result is uniform (and this holds w.r.t. both message and randomizer groups). Do we want to (i) ignore this, perhaps saying that our definition is slightly simplified (ii) develop the whole machinery of groups and randomness to do it properly or (iii) do something else?}
+
 \subsection{Minivoting}
+
+We can now build a first voting scheme out of a homomorphic encryption scheme.
+This first scheme was called ``minivoting'' by its authors Bernhard, Cortier,
+Pereira, Smyth and Warinschi and presented at Esorics 2011 \cite{BCPSW11}.
+Minivoting is not verifiable and indeed is only secure against passive attackers
+who cannot send malformed ciphertexts. By adding further components to
+minivoting, it can be turned into something very much like the real Helios
+scheme.
+
+\textcolor{Fuchsia}{TODO --- mention authentic channels, could be achieved with signatures etc.}
+
+\begin{definition}
+Minivoting is the following voting scheme for a yes/no question, based on a
+homomorphic asymmetric encryption scheme $E$ with a message space $\mathbb Z_n$
+for some $n$ larger than the number of voters.
+\begin{description}
+\item[Participants] Minivoting requires one authority, a public bulletin board
+to which everyone can post authenticated messages and any number of voters
+smaller than $n$.
+\item[Setup]
+The authority creates a key pair $(pk, sk) \gets E.\alg{KeyGen}$ and posts $pk$
+to the bulletin board.
+\item[Voting] Voters read the public key $pk$ off the board. They choose $v = 1$
+for ``yes'' and $v = 0$ for ``no'' and create a ballot $b \gets
+E.\alg{Encrypt}(pk, v)$ which they post on the board.
+\item[Tallying] The authority uses the $E.\alg{Add}$ operation to add all
+ballots, creating a final ballot $s$ which she decrypts as $d \gets E.\alg{Decrypt}
+(sk, s)$. The authority then counts the number $m$ of ballots submitted and
+posts the result ``$d$ yes, $m-d$ no'' to the board.
+\end{description}
+\end{definition}
 
 \section{Privacy}
 
