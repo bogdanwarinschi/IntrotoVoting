@@ -1217,9 +1217,54 @@ board but code for this was not available in Helios at the time.
 
 \textcolor{Fuchsia}{TODO --- introduce the actual proofs; some $\Sigma$-theory}
 
+\subsubsection{Ballot privacy.}
+We can now give the full ballot privacy game that protects against dishonest
+voters.
+
+\begin{definition}
+A voting scheme has ballot privacy if no attacker can do better in the following
+game than guess at random (with probability $1/2$).
+
+\begin{description}
+\item[Setup] The game picks a bit $b$ at random and keeps it secret. The game
+then sets up the voting scheme and plays the voters, authorities and bulletin
+board.
+
+\item[Moves] Once for each voter, the attacker may perform one of two moves.
+\begin{itemize}
+\item The attacker declares this voter to be honest. She may then choose two votes $v_0$ and
+$v_1$. The game writes down both votes. If $b = 0$, the game lets the voter vote
+for $v_0$; if $b = 1$ the game lets the voter vote for $v_1$.
+
+\item The attacker declares this voter to be dishonest and may provide an
+arbitrary ballot $b$ for the voter, which the game processes.
+\end{itemize}
+
+The attacker may ask to look at the bulletin board at any point in the game.
+
+When all voters have voted, the game individually decrypts all dishonest voters' ballots. It then gives the attacker the result computed as follows:
+for each honest voter, it takes the first ($v_0$) vote and for each dishonest
+voter, it takes the vote obtained by decrypting the submitted ballot.
+
+\item[Winning conditions]
+At any point in the game, the attacker may submit a guess for $b$. This ends the
+game immediately. The attacker wins if her guess is correct.
+\end{description}
+\end{definition}
+
+
 \subsection{Threshold encryption}
 
+The systems described so far have all used a single authority. This is bad for
+two reasons. First, a dishonest authority could decrypt individual ballots. (She
+cannot claim a false result due to the zero-knowledge proofs however.) Secondly,
+if the authority loses her key, the election cannot be tallied.
 
+Threshold schemes aim to mitigate these risks. In a $k$-out-of-$n$ threshold
+scheme, there are $n$ authorities and any subset of at least $k$ can tally the
+election. In this way, a coalition of up to $k - 1$ dishonest authorities cannot
+decrypt individual ballots (or obtain early results) whereas up to $n - k$ of
+the authorities can drop out and the election can still be tallied.
 
 \section{Verifiability}
 
