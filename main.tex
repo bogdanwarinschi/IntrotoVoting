@@ -841,12 +841,24 @@ at random.
 gives the attacker the public key $pk$. The game also picks a bit $b$ randomly
 from $\{0, 1\}$ and keeps this secret.
 \item[Moves] Once in the game, the attacker may pick a pair of messages $m_0$
-and $m_1$ and send them to the game. The game encrypts $c \gets \alg{Encrypt}
-(pk, m_b)$ and returns this to the attacker.
+and $m_1$ of the same length$^\dagger$ and send them to the game. The game
+encrypts $c \gets \alg{Encrypt} (pk, m_b)$ and returns this to the attacker.
 \item[Winning conditions.] The attacker may make a guess at $b$ which ends the
 game. The attacker wins if she guesses correctly.
 \end{description}
 \end{definition}
+
+\noindent($^\dagger$) The condition that the two messages be of the same length
+is to avoid the attacker guessing the message from the ciphertext length. In the
+example above, ``boy'' has three letters but ``girl'' has four so any encryption
+scheme that returns a ciphertext with the same number of characters as the
+message is vulnerable to such an attack and Alice should pad both her messages
+to the same length to be safe. In practice, many encryption schemes work not on
+characters but on blocks of characters in which case the restriction can be
+weakened to both messages producing the same number of ciphertext blocks; the
+ElGamal scheme which we will consider later operates on messages in a fixed
+group where all messages have the same length ``1 group element'' and this
+condition is vacuous.
 
 \textcolor{Fuchsia}{Introduce NM and CCA here? Put instantiation (ElGamal) here or in separate section?}
 
@@ -878,6 +890,127 @@ Further, if $c_1, c_2$ are ciphertexts for $m_1, m_2$ as above and $c$ is obtain
 The last condition says that summed ciphertexts have the same form as ones encrypted directly. This prevents the following degenerate construction: a ``ciphertext'' is a list of ciphertexts, the encryption algorithm returns a list with one element and \alg{Add} just returns a list containing its two input ciphertexts. The decryption algorithm takes a list, decrypts each element individually and returns the sum of all decryptions.
 
 \textcolor{Fuchsia}{What we actually want is that a sum-ciphertext hides how it was made. The fully formal definition over finite groups does this via the argument that if you perform a group operation with a uniform group element, the result is uniform (and this holds w.r.t. both message and randomizer groups). Do we want to (i) ignore this, perhaps saying that our definition is slightly simplified (ii) develop the whole machinery of groups and randomness to do it properly or (iii) do something else?}
+
+\subsubsection{Prime-order groups.}
+We are now working towards the ElGamal encryption scheme that we will use to
+build a toy voting scheme called ``minivoting'' and then extend this to get the
+Helios voting scheme. ElGamal uses a prime-order group, we sketch a
+number-theoretic construction. To set up such a group, one typically picks a
+prime $p$ such that $q = (p-1)/2$ is also prime (this is even more essential
+than for RSA, to avoid ``small subgroup'' problems). The group $\mathbb Z^*_p$
+with multiplication modulo $p$ has $p - 1$ elements; since $p$ is a large prime
+and therefore is odd there will be a factor $2$ in $p-1$. If $(p-1)$ factors as
+$2 \cdot q$ where $q$ is also prime and we pick an element $g \in \mathbb Z^*_p$
+of order $q$ then the subgroup $G := \langle g \rangle \subset \mathbb Z^*_p$ is
+itself a cyclic group of order $q$. Since $q$ is prime, $G$ has no true
+subgroups, i.e. apart from the identity, there is no extra ``structure'' to be
+discovered by examining the traces of individual group elements\footnotemark.
+\footnotetext{More formally, for any two distinct elements $x, y$ that are not
+the identity there is a unique isomorphism that takes $x$ to $y$, namely $(a
+\mapsto y\cdot x^{-1}\cdot a)$.}
+
+The ElGamal encryption scheme lives in such a group $G$ given by parameters $(p,
+q, g)$. Since $G$ is isomorphic to $\mathbb Z_q$, we have an inclusion $\mathbb
+Z_q \to G, (x \mapsto g^x \pmod{p})$. This map is efficient to compute
+(square-and-multiply and variations) but is considered to be hard to invert. Its
+inverse is known as taking the discrete logarithm of a group element. Further,
+given two group elements $h$ and $k$, there are unique integers $a, b \in
+\mathbb Z_q$ such that $h = g^a \pmod{p}$ and $k = g^b \pmod{p}$. The group
+operation sends such $(h, k)$ to $h \cdot k = g^{a + b} \pmod{p}$. We can define
+a further operation $\otimes$ that sends such $(h, k)$ to $g^{a \cdot b}
+\pmod{p}$. This turns out to be a bilinear map on $G$ called the Diffie-Hellman
+product and it is considered to be hard to compute in general; computing it for
+random $h, k$ is the computational Diffie-Hellman problem. For random $h, k$ and
+another group element $z$, it is even considered hard to tell whether $z = h
+\otimes k$ or $z$ is just another random group element, this is called the
+computational Diffie-Hellman problem. However, if you are given the integer $a$
+(from which you could easily compute $h = g^a$ in $G$) then you can easily take
+the Diffie-Hellman product with any $k$ as $h \otimes k = k^a \pmod{p}$.
+
+From this we can define Diffie-Hellman key generation, as used in the ElGamal
+encryption scheme:
+
+\begin{definition}
+A Diffie-Hellman group is a group $\langle g \rangle \subset \mathbb Z^*_p$ of
+order $q$ for $p, q$ primes with $(p-1)/2 = q$. Such a group is given by
+parameters $(p, q, g)$ and such parameters can be public and shared among all
+users of a cryptosystem.
+
+To generate a Diffie-Hellman keypair, pick parameters if required and pick an
+$x$ at random from $\mathbb Z_q$, then set $y = g^x \pmod{p}$. Your secret key
+is $x$ and your public key is $y$.
+\end{definition}
+
+Two comments on this scheme are in order. First, the group has order $q$ but is
+represented as a subgroup of $\mathbb Z^*_p$. This can lead to some confusion
+in implementations --- Cortier and Smyth \cite{CS???} identified a bug in an
+early version of the Helios voting system which mixed up the two. The rule to
+remember is, always reduce group elements modulo $p$ and integers (exponents)
+modulo $q$. This is why you pick your secret key from $\mathbb Z_q$ (it's in
+integer) and then compute the public key modulo $p$ (a group element).
+
+Secondly, there are other possible realisations of cryptographically useful
+prime-order groups in which the Diffie-Hellman product and discrete logarithms
+are assumed to be hard. The most popular alternative uses a representation on an
+elliptic curve over a finite field; we will not go into details of the
+construction in this work but the ElGamal encryption scheme works identically
+whether you are useing a $\mathbb Z^*_p$ group or an elliptic curve group.
+
+\subsubsection{ElGamal.}
+The ElGamal encryption scheme \cite{E85} was invented in 1985.
+It encrypts a message $m \in G$ as a pair $(c, d)$.
+First, the message is multiplied with a random group element, resulting in a
+uniformly distributed group element (one-time pad); this is the role of $d$.
+To allow the key-holder, and her only, to decrypt, an additional element $c$ is provided. The encryption procedure is:
+\begin{enumerate}
+\item Pick a random integer $r$ in $\mathbb Z_q$.
+\item Set $d = m \cdot y^r \pmod{p}$ where $y$ is the public key. Since $r$ was
+uniformly random in $\mathbb Z_q$, $d$ is uniformly random in $G$.
+\item Set $c = g^r \pmod{p}$. This is the decryption information.
+The ciphertext is the pair $(c, d)$.
+\end{enumerate}
+Since $m = d/(c \otimes y)$, the decryptor can compute $m$ with her secret key;
+for anyone else extracting the message is equivalent to solving the
+computational Diffie-Hellman problem and telling which of two messages was
+encrypted (the IND-CPA security game) is equivalent\footnotemark\ to solving the
+decisional Diffie-Hellman problem.
+\footnotetext{To be exact, there is a loss of a factor $1/2$ due to a conversion
+from a left-right game to a real-or-random one.}
+
+We summarise the algorithms again:
+\begin{definition}
+The ElGamal encryption scheme is the encryption scheme given by the algorithms below.
+\end{definition}
+\begin{description}
+
+\item[\alg{KeyGen}] Pick or obtain parameters $(p, q, g)$. Pick $sk$ at random
+from $\mathbb Z_q$ and set $pk = g^{sk} \pmod{p}$, return $(pk, sk)$.
+
+\item[\alg{Encrypt}$(pk, m)$] Pick $r$ at random from $\mathbb Z_q$ and set
+$c = g^r \pmod{p}, d = m \cdot pk^r \pmod{p}$. Return $(c, d)$.
+
+\item[\alg{Decrypt}$(sk, (c, d))$] Compute $m = d / c^{sk} \pmod{p}$.
+\end{description}
+
+ElGamal is homomorphic but the operation is not as useful as we would like:
+for ciphertexts $(c, d)$ and $(c', d')$ we can set
+\[
+\alg{Add}((c, d), (c', d')) := (c \cdot c' \pmod{p}, d \cdot d' \pmod{p})
+\]
+such that for messages $m, m'$ in $G$ we get a ciphertext for $m \cdot m'
+\pmod{p}$. What we would really like for voting is a scheme where messages lie
+in the additive group $\mathbb Z_q$ and we can perform homomprphic addition,
+rather than multiplication, of ciphertexts. If our messages are restricted to
+small integers (indeed, in our ballots they will be wither $0$ or $1$) then we
+can use a variation called exponential ElGamal: to encrypt an integer $m$,
+replace the $d$-component with $g^m \cdot pk^r \pmod{p}$. For two ciphertexts
+$(c, d)$ for $m$ and $(c', d')$ for $m'$ the \alg{Add} operation now produces a
+ciphertext that decrypts to $g^{m + m' \pmod{q}}$ as desired. While getting the
+exponent back from an arbitrary group element is hard (the discrete logarithm
+problem), for small enough exponents this can be done just by trying $g^0, g^1,
+g^2, \ldots$ until we find the correct decryption. This is the approach taken by
+Helios, which we will replicate in our minivoting scheme as a first step towards
+constructing Helios.
 
 \subsection{Minivoting}
 
@@ -914,6 +1047,59 @@ posts the result ``$d$ yes, $m-d$ no'' to the board.
 
 \section{Privacy}
 
+Following the principles set out by the IND-CPA game for encryption, we give a
+notion of ballot privacy against observers for voting schemes. The attacker can
+choose two votes for each voter and the voters will either cast the first or
+second vote (all voters make the same choice which of the two to cast). The
+attacker's aim is to tell which choice the voters made, just like the IND-CPA
+game asks the attacker to tell which of two messages was encrypted. Since the
+two results that this game produces may differ, which would immediately tell the
+attacker what is going on, the game will always report the first result.
+
+\begin{definition}
+A voting scheme has ballot privacy against passive attackers (observers) if no
+attacker can do better in the following game than guess at random (with
+probability $1/2$).
+
+\begin{description}
+\item[Setup] The game picks a bit $b$ at random and keeps it secret. The game
+then sets up the voting scheme and plays the voters, authorities and bulletin
+board.
+
+\item[Moves] Once for each voter, the attacker may choose two votes $v_0$ and
+$v_1$. The game writes down both votes. If $b = 0$, the game lets the voter vote
+for $v_0$; if $b = 1$ the game lets the voter vote for $v_1$.
+
+The attacker may ask to look at the bulletin board at any point in the game.
+
+When all voters have voted, the game gives the attacker the result computed as
+if everyone had cast their first ($v_0$) vote.
+
+\item[Winning conditions]
+At any point in the game, the attacker may submit a guess for $b$. This ends the
+game immediately. The attacker wins if her guess is correct.
+\end{description}
+\end{definition}
+
+Although we do not prove it here, we could show that if there is an attacker
+with a better than random chance of winning this game for the minivoting scheme
+(based on any homomorphic encryption scheme) then we can use the attacker to
+make a better than random guess at the IND-CPA game for the same encryption
+scheme. The rough idea is that any attacker guessing better than at random for
+the ballot privacy game must have selected at least one voter and given her
+different votes $v_0$ and $v_1$, so we could run the IND-CPA game with messages
+$v_0$ and $v_1$ and use the attacker's guess to make our guess at which one was
+encrypted. The challenge is that the IND-CPA game allows exactly one challenge
+move whereas the ballot privacy game allows many voters. This gives us the
+following proposition.
+
+\begin{proposition}
+For any IND-CPA secure homomorphic asymmetric encryption scheme, the derived
+minivoting scheme has ballot privacy against observers.
+\end{proposition}
+
+In particular this holds for the minivoting scheme based on ElGamal.
+
 \begin{structure}
 \begin{itemize}
 \item bad ballots (solution: PoKs)
@@ -924,7 +1110,116 @@ posts the result ``$d$ yes, $m-d$ no'' to the board.
 
 \subsection{Problems}
 
+Minivoting is not a secure scheme if some of the participants may misbehave.
+\begin{enumerate}
+\item A voter may encrypt $g^2$ to get an unfair advantage.
+\item For more complex ballots than yes/no questions, voters have even more ways
+to cheat.
+\item A voter can stall the election by submitting a ballot for $g^r$ for some
+random $r$ --- no-one will be able to decrypt the result anymore.
+\item You have to trust the authority that they have announced the correct
+result.
+\end{enumerate}
+
+Luckily, cryptographers have found solutions to all these problems. They are:
+\begin{enumerate}
+\item Zero-knowledge proofs.
+\item Zero-knowledge proofs.
+\item Zero-knowledge proofs.
+\item Zero-knowledge proofs.
+\end{enumerate}
+
+Zero-knowledge proofs are a technique to turn any protocol secure against
+observers into a protocol secure against misbehaving participants. The idea is
+that whenever a participant submits some information (say, a ballot) they must
+submit two things: first, the ballot and secondly, a proof that they have made a
+correct ballot. The zero-knowledge part is that these proofs reveal nothing
+beyond that the ballot is correct. In particular, a proof that your ballot is
+correct does not leak your vote.
+
+Before we can discuss the proofs that Helios voters will make in their ballots,
+we must first give the general ballot format for more complicated questions.
+
+\subsubsection{The ballot format.}
+Homomorphic ballots are possible not just for yes/no questions but for a number
+of voting/election setups including first-past-the-post, approval voting and
+top-$k$-of-$n$ elections. All these formats have in common that a voter answers
+a question by ticking some (or all, or none) of a predefined set of checkboxes
+and the election result is essentially a list, for each box, of how many voters
+ticked this box.
+Homomorphic voting in the above sense cannot handle write-in votes or ranked
+(Borda, Condorcet, Instant runoff etc.) counts.
+
+For example, in a first-past-the-post election for three candidates A, B and C,
+voters will be presented with three boxes --- obviously labelled A, B and C ---
+and must tick exactly one box each (or possibly none, to cast a blank vote). The
+election result is the number of votes that A, B and C each got, from which one
+can form the sum and determine the turnout and the percentage of votes that each
+candidate got.
+
+A ballot will contain one ciphertext for each option (checkbox). These
+ciphertexts will be encryptions of either 0 or 1. In addition, once we have
+introduced zero-knowledge proofs, each ciphertext will be accompanied by a proof
+that it really contains 0 or 1; these proofs are known as individual proofs. If
+the election specification sets limits on the numbers of boxes you can/must
+check, there will be one further proof attesting to this known as the overall
+proof. Of course a ballot can be composed of several structures as jsut
+described, allowing for multiple questions in a poll or multiple races in an
+election.
+
+\subsubsection{Attacks against the ballot format and ballot weeding.}
+Cortier and Smyth \cite{CS???} pointed out the following problem with bulletin
+board based elections. Suppose there are three voters, Alice, Bob and Eve. Alice
+and Bob both cast ballots. Next, Eve reads Alice's ballot off the board and
+submits a copy of it as her own ballot. The election result is now announced as
+2 yes, 1 no: Eve knows that Alice must have voted yes and Bob no, since the two
+copied ballots must enrypt the same vote. However, in a truly private election,
+Eve should never be able to tell whether Alice votes yes and Bob no or the other
+way round, since these two scenarios both make the same contribution to the
+result. If the result is that everybody voted yes then Eve can deduce that Alice
+voted yes too, which is unaviodable --- the problem with ballot copying is that
+Eve can find out more than she could by just observing the result.
+
+A first reaction to this problem could be to introduce ballot weeding in the
+following sense: we reject any ballot that is an exact copy of a ballot already
+on the board. If ballots are non-malleable ciphertexts, this is actually
+sufficient --- however, homomorphic ciphertexts can never be non-malleable as
+Eve can always \alg{Add} an encryption of $g^0$ to an existing ciphertext. Eve
+will still know that the two ciphertexts encrypt the same vote but no-one else,
+even the decryptor, can tell such a ``rerandomised'' ciphertext from a genuine
+ballot by a voter who just happened to vote for the same choice as Alice.
+
+We can solve this problem and the problem of Eve voting for $g^2$ in one go by
+adding a non-malleable zero-knowledge proof to each ciphertext. Ballot weeding
+will now reject any ballot that shares a proof with a previous ballot. In fact
+we even fix one more problem that Cortier and Smyth identified with the original
+ballot format. Consider a poll for choices A, B and C so ballots take the form
+\[
+(c_A, \pi_A, c_B, \pi_B, c_C, \pi_C, \pi_O)
+\]
+where $c_A$ is the ciphertext for choice $A$, $\pi_A$ is the individual proof
+that $c_A$ is well-formed and $\pi_O$ is the overall proof (that at most one
+of $c_A, c_B, c_C$ encrypts a 1). If the above is Alice's ballot, Eve can submit
+the following modified ballot:
+\[
+(c_B, \pi_B, c_A, \pi_A, c_C, \pi_C, \pi_O)
+\]
+The result is that Eve has swapped the A- and B-components of Alice's ballot around but she knows exactly what the relations between the original and
+modified ballot are and can use this knowledge to attack Alice's privacy. In
+Helios version 3, after you submitted a ballot, the hash of your ballot was
+sent to you as a confirmation value and the hashes of all ballots were displayed
+on a ``short board'', with the ``full board'' of all ballots also available. The
+point here is that Eve's ballot will have a completely different hash value to
+Alice's and while Helios prevented Eve from submitting a ballot with the same
+hash value as Alice's (i.e. making an exact copy), this modified ballot was
+accepted by Helios without complaint. It could be detected by auditing the full
+board but code for this was not available in Helios at the time.
+
+\textcolor{Fuchsia}{TODO --- introduce the actual proofs; some $\Sigma$-theory}
+
 \subsection{Threshold encryption}
+
+
 
 \section{Verifiability}
 
