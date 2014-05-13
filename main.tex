@@ -1281,41 +1281,41 @@ statements involving vectors which are tuples of group elements.
 
 With these foundations in place, here is a protocol to prove that you know a
 secret key $sk$ matching a given public key $pk$. Pick a second keypair $(sk',
-pk')$ and reveal $pk'$. Let someone pick a number between $0$ and $n - 1$ (for
-$n \leq q$, to be exact) and compute the linear combination $pk'' = pk' \cdot
-pk^n \pmod{p}$. You then reveal $sk'' := sk' + n \cdot sk \pmod{q}$ and your
-challenger checks that $g^{sk''} = pk'' \pmod{p}$. This protocol does the same
-(and some more) than the one above with $n$ envelopes. To see why, consider the
-point of view of the challenger who knows $pk, pk'$ and $pk''$ and has just
+pk')$ and reveal $pk'$. Let someone pick a number $c$ between $0$ and $n - 1$
+(for $n \leq q$, to be exact) and compute the linear combination $pk'' = pk'
+\cdot pk^c \pmod{p}$. You then reveal $sk'' := sk' + c \cdot sk \pmod{q}$ and
+your challenger checks that $g^{sk''} = pk'' \pmod{p}$. This protocol does the
+same (and some more) than the one above with $n$ envelopes. To see why, consider
+the point of view of the challenger who knows $pk, pk'$ and $pk''$ and has just
 picked $n$. Unless you know the correct $sk$, or are able to compute such a
-$sk$, there is only one single value of $n$ for which you have any hope of
+$sk$, there is only one single value of $c$ for which you have any hope of
 providing the correct answer that will convince your challenger. Your
-probability of cheating is bounded by $1/n$ and $n$ can ba chosen as large as
+probability of cheating is bounded by $1/n$ and $n$ can be chosen as large as
 you like (up to $q-1$).
 
-Suppose that there are two distinct values of $n$, namely $n_1$ and $n_2$, for
+Suppose that there are two distinct values of $c$, namely $c_1$ and $c_2$, for
 which you have some nonzero probability of finding a correct answer and call
 these answers $sk_1$ and $sk_2$. By a bit of linear algebra, since both answers
 are correct we must have
 \begin{eqnarray}
-g^{sk_1} & = & pk' \cdot pk^{n_1} \pmod{p} \\
-g^{sk_2} & = & pk' \cdot pk^{n_2} \pmod{p}
+g^{sk_1} & = & pk' \cdot pk^{c_1} \pmod{p} \\
+g^{sk_2} & = & pk' \cdot pk^{c_2} \pmod{p}
 \end{eqnarray}
 which suggests that we divide the two, cancelling $pk'$:
 \begin{eqnarray}
-g^{sk_1} / g^{sk_2} & = & pk^{n_1} / pk^{n_2} \pmod{p} \\
-g^{sk_1 - sk_2 \pmod{q}} & = & pk^{n_1 - n_2 \pmod{q}} \pmod{p}
+g^{sk_1} / g^{sk_2} & = & pk^{c_1} / pk^{c_2} \pmod{p} \\
+g^{sk_1 - sk_2 \pmod{q}} & = & pk^{c_1 - c_2 \pmod{q}} \pmod{p}
 \end{eqnarray}
-but the exponent space is a field and $n_1, n_2$ are distinct so we can
+but the exponent space is a field and $c_1, c_2$ are distinct so we can
 rearrange to get
 \begin{eqnarray}
-g^{\frac{sk_1 - sk_2}{n_1 - n_2}\pmod{q}} & = & pk \pmod{p}
+g^{\frac{sk_1 - sk_2}{c_1 - c_2}\pmod{q}} & = & pk \pmod{p}
 \end{eqnarray}
 and this exponent is exactly the secret key $sk$ such that $g^{sk} = pk
 \pmod{p}$.
 In other words, if you can find the answers $sk_1, sk_2$ to two different
-challenges $n_1, n_2$ then from this information you can compute a secret key
-$sk = \frac{sk_1 - sk_2}{n_1 - n_2}\pmod{q}$ yourself.
+challenges $c_1, c_2$ then from this information you can compute a secret key
+$sk = \frac{sk_1 - sk_2}{c_1 - c_2}\pmod{q}$ yourself.
 
 This protocol is Schnorr's protocol \cite{S??} for proof of knowledge of a
 discrete logarithm. An additional advantage of this protocol over the envelope-
@@ -1334,6 +1334,164 @@ $pk$) can also compute a secret key $sk$ that matches $pk$. A cryptographer
 would say that Schnorr's protocol is a ``proof of knowledge'' of a value $sk$
 such that $g^{sk} = pk \pmod{p}$.
 \end{proposition}
+
+Suppose that Alice is using Schnorr's protocol to prove to Bob that she knows
+her secret key. We have just established that Alice cannot cheat Bob (except
+with probability at most $1/n$). Can Bob cheat? That is, can Bob use the
+Schnorr protocol to gain more information about Alice's secret key than he could
+if he only got her public key $pk$ in the first place?
+
+The answer is of course ``no'' --- at least if Bob picks his challenge randomly.
+What Bob gets to see in this protocol is a new public key $pk'$ and a secret key
+$sk''$ for a $n$ of his choice; we argue that Bob could just as well create
+these elements himself if Alice didn't want to run the protocol with him.
+\begin{enumerate}
+\item Bob picks a value $c$ at random from $\{0, 1, \ldots, n-1\}$.
+\item Bob picks a value $sk''$ at random from $\{0, 1, \ldots, q-1\}$ and
+computes $pk'' := g^{sk''} \pmod{p}$.
+\item Bob sets $pk' = pk''/pk^c \pmod{p}$ where $pk$ is Alice's public key.
+\end{enumerate}
+The triple $(pk', c, sk'')$ looks exactly like one that would be generated if
+Bob did Schnorr's protocol with Alice; in particular the verification equation
+holds: $g^{sk''} = pk' \cdot pk^c \pmod{p}$ from the definition of $pk'$ and
+$c, pk', sk''$ are uniformly random subject to this equation holding.
+So Schnorr's protocol gives Bob no more information about Alice's key than he
+could already compute by himself. Another way of phrasing this argument is that
+if Alice does the protocol with Bob and Carol observes this, the protocol
+convinces Bob but it cannot convince Carol: Alice and Bob could be working
+together to cheat Carol. To do this, Alice could pick any public key for which
+she does not know the secret key, Bob could create values as above and agree
+them with Alice beforehand and they could run the protocol together on these
+values.
+
+\begin{proposition}
+If Bob picks his challenge $c$ randomly, he gains no information from a run of
+Schnorr's protocol with Alice. A cryptographer would say that Schnorr's
+protocol is ``zero-knowledge'' for honest verifiers.
+\end{proposition}
+
+The bit about honest verifiers --- Bob picking his challenge randomly --- is not
+just a technicality. For sure, it cannot help Bob to choose his challenge in a
+way that Alice could predict (this just allows Alice to cheat, but not Bob). Bob
+can however throw a spanner in the works by choosing his challenge as the value
+of a pseudorandom or hash function on input the values he has seen so far, $pk$
+and $pk'$. This breaks the ``simulation'' argument above because Bob had to
+choose his $c$ before he picked $pk'$. This is exactly why Alice needs to know
+$sk$ to convince Bob but Bob does not to simulate the protocol: when Alice is
+talking to Bob, she has to send him $pk'$ before he chooses $c$.
+
+Before we go on to fix this problem, we slightly abstract Schnorr's protocol
+which will come in useful when we discuss other protocols along similar lines
+such as Chaum-Pedersen. The flow of messages in Schnorr's protocol can be drawn
+to look like the Greek letter $\Sigma$ which prompted Cramer to call such
+protocols ``$\Sigma$-protocols''.
+
+\begin{definition}
+A $\Sigma$-protocol is a zero-knowledge (against honest verifiers) proof of
+knowledge of a preimage of a linear map $\phi$ (over some field $\mathbb F$),
+after the following template if Alice wishes to prove knowledge of a preimage
+$x: y = \phi(x)$ of a value $y$ to Bob.
+\begin{enumerate}
+\item Alice samples a random $a$ from the domain of $\phi$, sets $b := \phi(a)$
+and sends $b$ to Bob. We assume that Bob already knows $y$, alternatively Alice
+could send $y$ to Bob too.
+\item Bob picks a challenge $c$ randomly from the set $\{0, 1, \ldots, n-1\}$
+which must form part of the field $\mathbb F$. Bob sends $c$ to Alice.
+\item Alice computes $d := a + cx$ in the field $\mathbb F$ and sends $d$ to
+Bob.
+\item Bob checks that $\phi(d) = b + c \cdot y$ where this calculation is done
+in the $\mathbb F$--vector space of which $y$ is an element ($c \cdot y$ is
+scalar multiplication; $c$ is a field element).
+\end{enumerate}
+\end{definition}
+A $\Sigma$-protocol gives Alice no more than a $1/n$ probability of cheating.
+
+We have a second problem beyond Bob not choosing a random $c$. If Alice wants to
+use a zero-knowledge proof to convince everyone that her ballot is valid, using
+an interactive proof like the one above would mean that everyone must be able to
+challenge Alice to run a protocol with them, even after the election has closed.
+This is clearly impractical. What we want is a non-interactive proof, where
+Alice can once and for all time convince every possible Bob that her ballot is
+valid. And, almost paradoxically, the way Alice can do this is by doing exactly
+what we just argued that no Bob can be allowed to do: choose the challenge $c$
+herself as a hash value on $pk$ and $pk'$. This technique is usually attribute
+to and named after Fiat and Shamir\footnotemark \cite{FS86}.
+\footnotetext{The attribution is not uncontested: others prefer to credit Blum
+with the technique.}
+
+\begin{definition}
+The Fiat-Shamir transformation of a $\Sigma$-protocol is the protocol in which
+Bob's choice of a challenge $c$ is replaced by Alice computing the challenge as
+$c := H(y, b)$ where $y$ is the value of which she is proving a preimage and $b$
+is her ``commitment'', the message that she would send to Bob immediately before
+getting his challenge. $H$ is a cryptographic hash function with range $\{0, 1,
+\ldots, n-1\}$. This is a non-interactive proof of knowledge.
+To verify a proof $\pi = (y, b, c, d)$ you first check that $c = H(y, b)$. If
+this holds, check that $\phi(d) = b + c\cdot y$ for the function $\phi$ in
+question and accept the proof if this is the case.
+\end{definition}
+
+With this definition we can give the exact steps that a Helios authority
+performs to generate her key share.
+\begin{enumerate}
+\item Obtain parameters $(p, q, g)$ or agree these with the other authorities.
+\item Generate a key pair by picking $sk_i$ randomly from $\mathbb Z_q$ and
+setting $pk_i := g^{sk_i} \pmod{p}$. Here $i$ is some identifier.
+\item Pick another keypair $(a, b = g^a \pmod{p})$ for the proof.
+\item Compute $c := H(pk_i, a) \pmod{q}$ where $H$ is a hash function (Helios
+uses SHA-256).
+\item Compute $d := a + c \cdot sk_i \pmod{q}$.
+\item Your public key component is $pk_i$ and its proof of
+correctness\footnotemark is $\pi_i = (b, d)$. Your public key share is
+$(pk_i, \pi_i)$.
+\end{enumerate}
+\footnotetext{You do not need to include $c$ as anyone verifying the proof must
+recompute it from $pk_i$ and $a$ anyway.}
+
+\textcolor{Fuchsia}{TODO --- threshold encryption needs to come before proofs if
+we want to use decryption shares here.}
+
+To prove that you have decrypted a ciphertext correctly, you need to show that
+you have produced a value $d$ such that $d = a^{sk_i} \pmod{p}$ where $sk_i$ is
+your secret key share satisfying $g^{sk_i} = pk_i \pmod{p}$, the value $a$ is
+the first component of the ciphertext and $pk_i$ is the key component of your
+public key share. Put another way, you have to show knowledge of an $sk_i$
+satisfying
+\[
+a^{sk_i} = d \pmod{p} \wedge g^{sk_i} = pk_i \pmod{p}
+\]
+All constants appearing in this formula ($a, d, g, pk_i, p$) are public.
+In the notation that we have just introduced, you have to show knowledge of
+\[
+\textrm{a preimage } x \textrm{ of } (d, g) \textrm { under } \phi(x) =
+( a^x \pmod{p}, g^x \pmod{p})
+\]
+this function is conveniently also linear. Here we start to see why linearity
+and vector spaces are the correct way to understand $\Sigma$-protocols 
+abstractly: for the finite field $\mathbb F_q$, our function signature is
+$\phi: \mathbb Z_q \to G^2$, mapping integers (1-dimensional vectors) into
+2-dimensional vectors over the group $G$.
+
+The protocol for this particular $\phi$-function was invented by Chaum and
+Pedersen \cite{CP??}. We give the exact steps to prove a decryption share
+correct:
+\begin{enumerate}
+\item Inputs: ciphertext $(a, b)$, public key share $pk_i$, secret key share
+$sk_i$.
+\item Pick a random $r$ from $\mathbb Z_q$. Compute 
+\[
+(u, v) := \phi(r) = (a^r \pmod{p}, g^r \pmod{p})
+\]
+\item Compute a challenge as $c := H(pk_i, a, b, u, v)$.
+\item Let $s := r + c \cdot sk_i \pmod{q}$.
+\item Compute the decryption factor $d := a^{sk_i} \pmod{p}$.
+\item Reveal $d$ and the proof $\pi := ((u, v), s)$.
+\end{enumerate}
+To check such a proof, your inputs are $a, b, pk_i, u, v$ and $s$.
+Compute the hash value $c := H(pk_i, a, b, u, v)$ and check that
+\[
+a^s = u \cdot d^c \pmod{p} \quad \wedge \quad g^s = v \cdot (pk_i)^c \pmod{p}
+\]
 
 \subsubsection{Ballot privacy.}
 We can now give the full ballot privacy game that protects against dishonest
