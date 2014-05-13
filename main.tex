@@ -1217,6 +1217,124 @@ board but code for this was not available in Helios at the time.
 
 \textcolor{Fuchsia}{TODO --- introduce the actual proofs; some $\Sigma$-theory}
 
+\subsubsection{Zero-knowledge proofs.}
+Zero-knowledge proofs are tools that allow you to prove that you have done a
+certain operation correctly, without revealing more than that fact.
+In Helios, we use zero-knowledge proofs in three ways:
+\begin{itemize}
+\item The authorities prove that they know their secret keys (that match the
+election public keys), without revealing their secret keys.
+\item Each voter proves that she has cast a ballot for a valid vote, without
+revealing her vote.
+\item At the end of the election, the authorities prove that they have tallied
+correctly (decrypted the result correctly), again without revealing their secret
+keys.
+\end{itemize}
+In this section we develop the mathematical theory of zero-knowledge proofs
+based on so-called $\Sigma$-protocols and then give the protocols used in
+Helios. Our development and presentation of $\Sigma$-protocol theory follows the
+work of Bernhard \cite{B14} and we develop the Schnorr, Chaum-Pedersen and
+disjnuctive Chaum-Pedersen (DCP) protocols.
+
+Consider an ElGamal keypair $(sk, pk = g^{sk} \pmod{p})$ for a group defined by
+parameters $(p, q, g)$. Suppose you want to prove that you know the secret key
+matching the public key. One paper-based protocol, following the ideas in
+earlier sections, could work like this: prepare $100$ keypairs. Write the secret
+keys on pieces of paper and place them in opaque envelopes; write the matching
+public keys on the outside of the envelopes. Let someone pick $99$ of the
+envelopes, open them and check that the keys inside match those outside (i.e.
+that $g^{sk_i} = pk_i \pmod{p}$ for each pair $(pk_i, sk_i)$ opened). If this
+holds for randomly chosen envelopes, then with probability at least $99/100$ the
+last envelope is also correct and you can use the key written on the outside as
+your public key. This protocol has two slight drawbacks. First, it is wasteful
+with envelopes --- especially if you want a really high security margin like
+$1 - 2^{100}$ --- which is not good for the environment. Secondly, you only
+convince one person that your key is correct: an observing third party cannot
+know if you have not agreed in advance which envelope your accomplice will not
+pick, in which case you could easily cheat and claim someone else's public key
+as your own, for which you do not know the secret key.
+
+To address the first problem we note that the map turning secret keys into
+public keys, $(sk \mapsto g^{sk} \pmod{p})$, is linear if you look at it the
+right way. If you have two key pairs $(sk, pk)$ and $(sk', pk')$ then $sk + sk'
+\pmod{q}$ is the secret key matching the public key $pk \cdot pk' \pmod{p}$.
+Note that the operation on public keys is written as a multiplication instead of
+an addition but the secret and public keys live in isomorphic groups so they are
+really both just group operations. The map taking a secret key to a public key
+is one half of an isomprphism, the other half is the discrete logarithm
+operation which is (hopefully) hard to compute but a well-defined map
+nonetheless. Further, if you rerandomise a secret key $sk$ with an integer $r$
+to get $sk' = r \cdot sk \pmod{q}$ then the corresponding public key is $pk' =
+pk^r \pmod{p}$ where $pk$ was the public key corresponding to $sk$.
+To speak of a linear map we actually need a vector space over a field; since we
+are working in a prime-order cyclic group $\mathbb Z_q$ for the exponents we may
+embed this into the finite field $\mathbb F_q$ by adjoining the obvious field
+multiplication structure to get our field. Any field is a one-dimensional vector
+space over itself so the secret key space can be interpreted as a $\mathbb
+F_q$--vector space. The public key space is isomorphic to the secret key space,
+so we can really speak of the isomorphism $(sk \mapsto g^{sk} \pmod{p})$ as an
+$\mathbb F_q$--linear map. The statement that you can add secret keys is saying
+that our map commutes with vector addition; rerandomising a key is field
+multiplication and together these two properties show linearity. Why we do all
+this should become clear later when we construct $\Sigma$-protocols on
+statements involving vectors which are tuples of group elements.
+
+With these foundations in place, here is a protocol to prove that you know a
+secret key $sk$ matching a given public key $pk$. Pick a second keypair $(sk',
+pk')$ and reveal $pk'$. Let someone pick a number between $0$ and $n - 1$ (for
+$n \leq q$, to be exact) and compute the linear combination $pk'' = pk' \cdot
+pk^n \pmod{p}$. You then reveal $sk'' := sk' + n \cdot sk \pmod{q}$ and your
+challenger checks that $g^{sk''} = pk'' \pmod{p}$. This protocol does the same
+(and some more) than the one above with $n$ envelopes. To see why, consider the
+point of view of the challenger who knows $pk, pk'$ and $pk''$ and has just
+picked $n$. Unless you know the correct $sk$, or are able to compute such a
+$sk$, there is only one single value of $n$ for which you have any hope of
+providing the correct answer that will convince your challenger. Your
+probability of cheating is bounded by $1/n$ and $n$ can ba chosen as large as
+you like (up to $q-1$).
+
+Suppose that there are two distinct values of $n$, namely $n_1$ and $n_2$, for
+which you have some nonzero probability of finding a correct answer and call
+these answers $sk_1$ and $sk_2$. By a bit of linear algebra, since both answers
+are correct we must have
+\begin{eqnarray}
+g^{sk_1} & = & pk' \cdot pk^{n_1} \pmod{p} \\
+g^{sk_2} & = & pk' \cdot pk^{n_2} \pmod{p}
+\end{eqnarray}
+which suggests that we divide the two, cancelling $pk'$:
+\begin{eqnarray}
+g^{sk_1} / g^{sk_2} & = & pk^{n_1} / pk^{n_2} \pmod{p} \\
+g^{sk_1 - sk_2 \pmod{q}} & = & pk^{n_1 - n_2 \pmod{q}} \pmod{p}
+\end{eqnarray}
+but the exponent space is a field and $n_1, n_2$ are distinct so we can
+rearrange to get
+\begin{eqnarray}
+g^{\frac{sk_1 - sk_2}{n_1 - n_2}\pmod{q}} & = & pk \pmod{p}
+\end{eqnarray}
+and this exponent is exactly the secret key $sk$ such that $g^{sk} = pk
+\pmod{p}$.
+In other words, if you can find the answers $sk_1, sk_2$ to two different
+challenges $n_1, n_2$ then from this information you can compute a secret key
+$sk = \frac{sk_1 - sk_2}{n_1 - n_2}\pmod{q}$ yourself.
+
+This protocol is Schnorr's protocol \cite{S??} for proof of knowledge of a
+discrete logarithm. An additional advantage of this protocol over the envelope-
+based one is that you can pick one keypair $(pk, sk)$ and re-run the protocol
+to convince many different people that you know your secret key, picking a new
+$(pk', sk')$ keypair for each person you run the protocol with but keeping the
+same public key $pk$ all the time. (If you ever re-use a $pk'$, the two people
+that you did the protocol with using the same $pk'$ can get together and
+compute your secret key exactly as described above, unless they both happened to
+pick the same challenge which is very unlikely for large $n$.) We summarise:
+
+\begin{proposition}
+Any person that can convince a challenger with more than $1/n$ probability in
+Schnorr's protocol (for challenges from $\{0, \ldots, n-1\}$ and public key
+$pk$) can also compute a secret key $sk$ that matches $pk$. A cryptographer
+would say that Schnorr's protocol is a ``proof of knowledge'' of a value $sk$
+such that $g^{sk} = pk \pmod{p}$.
+\end{proposition}
+
 \subsubsection{Ballot privacy.}
 We can now give the full ballot privacy game that protects against dishonest
 voters.
@@ -1266,7 +1384,168 @@ election. In this way, a coalition of up to $k - 1$ dishonest authorities cannot
 decrypt individual ballots (or obtain early results) whereas up to $n - k$ of
 the authorities can drop out and the election can still be tallied.
 
+In our definition of threshold schemes, the authorites run an interactive
+protocol to generate keys, as a result of which each authority obtains a public key share and a secret key share. A user of the scheme can run a key combination algorithm to obtain a single public key and encrypt messages with this. To decrypt, each authority that takes part in the decryption process produces a decryption share with her secret key and anyone can combine at least $k$ decryption shares to recover the message.
+
+\begin{definition}
+A $(k, n)$ threshold encryption scheme consists of a protocol \alg{KeyGen} for $n$ authorities and four algorithms
+\[
+\left(\alg{CombineKey}, \alg{Encrypt}, \alg{DecryptShare}, \alg{Combine}\right)
+\]
+the key generation protocol results in all participants obtaining a public key
+share $pk_i$ and a secret key share $sk_i$. The key combination algorithm takes
+a list of $n$ public key shares and returns a public key $pk \gets
+\alg{CombineKey}(pk_1, \ldots, pk_n)$ or the special symbol $\bot$ to indicate
+invalid shares. The encryption algorithm works just like non-threshold
+encryption: $c \gets \alg{Encrypt}(pk, m)$. The decryption share algorithm takes
+a secret key share $sk_i$ and a ciphertext $c$ and outputs a decryption share
+$d_i \gets \alg{DecryptShare}(sk_i, c)$. The recombination algorithm takes a
+ciphertext $c$, a set $D = \{d_i\}_{i \in I}$ of at least $k$ decryption shares
+and outputs either a message $m$ or the symbol $\bot$ to indicate failure.
+
+The correctness condition is that for any message $m$ and any set $I$ of at
+least $k$ authorities, the following yields $d = m$:
+\[ \begin{array}{l}
+((pk_1, \ldots, pk_n), (sk_1, \ldots, sk_n)) \gets \alg{KeyGen}(); \\
+pk \gets \alg{CombineKey}(pk_1, \ldots, pk_n);\ 
+c \gets \alg{Encrypt}(pk, m); \\
+\textrm{for } i \in I:\ d_i \gets \alg{DecryptShare}(sk_i, c);\ 
+d \gets \alg{Combine}(c, \{d_i\}_{i \in I});
+\end{array} \]
+\end{definition}
+
+\subsubsection{Threshold ElGamal for $k = n$.}
+Here is an implementation of threshold encryption for $k = n$, i.e. all
+authorities must be present to decrypt. ElGamal can also be used for arbitrary
+$(k, n)$ thresholds but the construction is more complex --- the one given here
+is the one used in the Helios scheme.
+
+\begin{description}
+\item[\alg{KeyGen}]
+All authorities agree on or obtain common parameters $(p, q, g)$. Each authority
+then simply generates an ElGamal keypair under these parameters. Each authority
+then makes a Schnorr zero-knowledge proof of knowledge of their own secret key;
+their public key share is their ElGamal public key together with this proof.
+
+\item[\alg{CombineKey}]
+Take all $n$ shares $pk_1, \ldots, pk_n$ and their proofs and check that all
+proofs verify, otherwise output $\bot$ and halt. Then multiply them together:
+$pk \gets \prod_{i=1}^n pk_i \pmod{p}$.
+
+\item[\alg{Encrypt}] This is standard ElGamal encryption with the public key.
+
+\item[\alg{DecryptShare}$(sk_i, c)$] An ElGamal ciphertext is a pair $c = (a, b)$. Return the share $d_i := a^{sk_i} \pmod{p}$ together with a Chaum-Pedersen proof that
+the same secret key was used for generating the public key share and the decryption share, i.e. a proof of knowledge of an element
+\[
+\{sk_i\ :\ g^{sk_i} = pk_i \pmod{p} \wedge a^{sk_i} = d_i \pmod{p} \}
+\]
+
+\item[\alg{Combine}]
+On input a ciphertext $c = (a, b)$ and a set of $n$ decryption shares
+$\{d_i\}_{i=1}^n$ with their associated proofs, check that all the proofs verify
+and return $\bot$ if they do not. Then, set $d := b / \prod_{i=1}^n d_i
+\pmod{p}$.
+\end{description}
+
+This works because
+\[
+d = b / \prod_{i=1}^n d_i = b / \prod_{i=1}^n a^{sk_i} = b / a^{\sum_{i=1}^n sk_i \pmod{q}} = b / a^{sk} \pmod{p}
+\]
+where $sk := \sum_{i=1}^n sk_i \pmod{q}$ is the secret key corresponding to the
+public key $pk$, so this is just a normal ElGamal decryption.
+We draw the reader's attention to the correct use of $p$s and $q$s: the group
+elements are taken modulo $p$ whereas the integers in the exponent are taken
+modulo $q = (p-1)/2$.
+
+\subsubsection{Helios.}
+We now have all the building blocks together to describe the Helios electronic
+voting scheme.
+
+To generate an election or poll, the authorities agree on the questions and
+options and generate parameters $(p, q, g)$. They each generate an ElGamal
+keypair with a Schnorr proof to obtain their threshold keys. One of the
+authorities then combines the public key and publishes the election
+specification, parameters, public key shares and the public key itself on a
+bulletin board.
+
+To vote, voters obtain and check the public key. By check, we mean that they
+check the authorities' Schnorr proofs and re-run the key combination step.
+For each option ``checkbox'', the voter encrypts $g^0$ to leave the box empty
+and $g^1$ to chck it. She accompanies each ciphertext with a DCP proof that she
+has indeed encrypted either $g^0$ or $g^1$. If the election specification
+restricts the maximum or minimum number of boxes that a voter must check for a
+question, she also makes an overall proof that the number of boxes checked lies
+in the allowed range. The voter's ballot contains her ciphertexts, individual
+proofs and if required and overall proof for each question; she posts this
+ballot to the bulletin board. Typically, a board will require voters to
+authenticate themselves before accepting any ballots. The board never sees the
+actual votes however.
+
+To tally an election, the authorities check all proofs in the ballots and
+discard any ballots with invalid proofs. Further, they reject any ballot that
+has copied a proof from an earlier ballot\footnotemark. These checks can also
+be done by the board itself when ballots are submitted so invalid ones never end
+up on the board but for security reasons, the authorities always need to
+repeat these checks to protect against a dishonest board collaborating with a
+dishonest voter.
+\footnotetext{At least, this is the way Helios should check ballots and will do
+in a future version. The current version (v3) is still susceptible to some
+ballot-copying attacks.}
+One authority sums all ciphertexts for each individual question and posts
+the sum-ciphertexts back on the board. Each authority then produces a
+decryption share for each sum-ciphertext and posts this to the board. One
+authority completes the tally by combining the decryption shares for each sum
+and posting this on the board and computing the result in the correct format,
+for example each option's count as a percentage of the total number of ballots
+cast.
+
 \section{Verifiability}
+
+Anyone can verify a Helios election. Taking the board of a completed election,
+they should perform the following steps.
+\begin{enumerate}
+\item Check that the Schnorr proofs on the public key shares are correct and
+that the public key was combined correctly.
+\item Check that each ballot meets the election format (correct number of
+ciphertexts and proofs) and that all proofs in the ballots verify, or that all
+invalid ballots have been marked as such and excluded from the tally.
+\item If ballots contain voter information, check that this is consistent, i.e.
+only eligible voters have voted and no-one has cast more votes than allowed.
+\item Check that no ballot re-uses a proof from an earlier ballot, or that all
+ballots that do so have been marked as invalid.
+\item Recompute the sum-ciphertexts and check that they are correct.
+In particular, the sums should be over only those ballots not marked as invalid.
+\item Check the zero-knowledge proofs on all decryption shares.
+\item Recombine all decryptions and check that they are correct.
+\item Check that the announced result matches the decryptions.
+\end{enumerate}
+
+From this procedure, we can check whether Helios meets the following
+verifiability criteria.
+
+\begin{description}
+\item[Individual verifiability]
+Each voter can save a copy of her ballot and check that it is included in the
+final bulletin board.
+
+\item[Eligibility verifiability]
+This depends on the election setting as eligibility information must be
+available to check this (such as a list of all eligible voters) and a method is
+required to verify that ballots really come from who they claim to come from. If
+voters are all equipped with digital signature keypairs and the public keys are
+available in a public directory, voters could be asked to sign their ballots as
+part of the authentication process.
+
+\item[Universal verifiability]
+This was the key design aim of Helios and is satisfied. All the steps in the
+protocol that use secret information are protected by zero-knowledge proofs:
+key generation, ballot creation (the vote is secret) and decryption. These
+proofs are available on the bulletin board for anyone to audit.
+
+\item[Ballot verifiability]
+Ballots are protected by zero-knowledge proofs attesting to the fact that they
+contain correct votes. These votes are available on the bulletin board to audit.
+\end{description}
 
 \section{Putting it all together}
 
@@ -1283,6 +1562,11 @@ In: ???
 D. Schr\"oder and D. Unruh.
 Security of Blind Signatures Revisited.
 eprint, report 2011/316.
+
+\bibitem[B14]{B14}
+D. Bernhard.
+Zero-Knowledge Proofs in Theory and Practice.
+PhD thesis, University of Bristol, 2014.
 
 \end{thebibliography}
 
