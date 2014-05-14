@@ -1493,6 +1493,239 @@ Compute the hash value $c := H(pk_i, a, b, u, v)$ and check that
 a^s = u \cdot d^c \pmod{p} \quad \wedge \quad g^s = v \cdot (pk_i)^c \pmod{p}
 \]
 
+There is an important difference between Schnorr's protocol and that of Chaum
+and Pedersen. In the former, Bob already knows that whatever Alice claims as her
+public key has a discrete logarithm --- all group elements do, by definition.
+Alice is only trying to convince Bob that she knows the discrete logarithm of
+her public key.
+By contrast, in the Chaum-Pedersen protocol the focus is less on convincing Bob
+that you know how to decrypt but that you have done so correctly. Indeed, if a
+ciphertext decrypts to $d$ but you claim some $d' \neq d$ instead, the pair
+$(pk, d')$ will not lie in the image of $\phi$ so there will be no $x$ with
+which you can convincingly run the protocol. For the interactive Chaum-Pedersen
+protocol, someone who has decrypted incorrectly cannot cheat (with more than
+$1/n$ probability) even if they have unlimited resources and can even take
+discrete logarithms. For the non-interactive protocol, the security analysis
+depends on the hash function but we still get the property that no realistic
+attacker can produce a proof of a false decryption.
+
+\begin{proposition}
+$\Sigma$-protocols following our definition are sound, that is it is infeasible
+to produce a proof (whether interactive or non-interactive) for a value not in
+the image of the $\phi$-function.
+\end{proposition}
+
+\textcolor{Fuchsia}{TODO: confirm that interactive CP is sound against unbounded
+adversaries (should follow from special soundness), what happens in the RO case
+(and do we bother mentioning it)?}
+
+We come to our third and final $\Sigma$-protocol used in the Helios voting
+scheme. This one is for the voter to prove that she encrypted a valid vote in
+her ballot (namely $0$ or $1$ in each ciphertext), without revealing the vote.
+ElGamal encryption of a message $m$ with random value $r$, in the exponential
+version used by Helios, can be expressed by the formula
+\[
+c = \phi(m, r) := (g^r \pmod{p}, g^m pk^r \pmod{p})
+\]
+which is linear in $m$ and $r$ as a function with signature 
+$\phi: (\mathbb Z_q)^2 \to G^2$ 
+where $g, p, q$ and $pk$ are taken to be constants.
+This immediately yields a $\Sigma$-protocol to prove knowledge of your vote and
+randomness but does not prove that your vote $m$ lies in a particular range.
+Let us consider how you would prove that you had voted for a particular value
+of $m$. If your ciphertext is $(a, b) = (g^r \pmod{p}, g^m pk^r \pmod{p})$ then
+you could divide out $g^m$ again to get $(a, b') = (a, b/g^m \pmod{p})$ which
+is the image of the linear function
+\[
+\phi': \mathbb Z_q \to G^2, r \mapsto (g^r \pmod{p}, pk^r \pmod{p})
+\]
+In other words, to prove that $(a, b)$ is a ciphertext for $m$ you can prove
+that you know a preimage $r$ of $(a, b/g^m \pmod{p})$ under the function
+$\phi'$. This is of course exactly the protocol of Chaum and Pedersen with $pk$
+playing the role of the second basis (instead of $a$ in our last discussion).
+
+There is a general construction to prove that you know a preimage of (at least)
+one of two linear functions for given images, without revealing which. Given
+linear functions $\phi_0, \phi_1$ and values $y_0, y_1$ in their respective
+domains, to prove that you know $x_0: \phi_0(x_0) = y_0$ or
+$x_1: \phi_1(x_1) = y_1$ you run the following protocol.
+\begin{itemize}
+\item Start running the $\Sigma$-protocols for both functions.
+\item The challenger picks a single challenge $c$ from $\{0, 1, \ldots, n-1\}$.
+\item For each of the two protocols, you produce a new challenge $c_i$ and a
+final value $x''_i$ such that both protocols are correct individually and $c =
+c_1 + c_2 \pmod{n}$.
+\end{itemize}
+
+The trick is that you use the cheating approach described above where you pick
+$c$ and $x''$ first for the function where you do not have a preimage. The
+condition $c = c_1 + c_2$ where $c$ is chosen by the challenger lets you cheat
+in one of the two protocols but not both. In more detail, here is the general
+construction.
+
+\begin{enumerate}
+\item For the value $i$ where you know a preimage $x_i: \phi_i(x_i) = y_i$,
+pick a new pair $(x'_i, y'_i = \phi_i(x'_i))$ as you would to start the $\Sigma$
+-protocol for this function.
+\item For the value $j$ where you do not know a preimage, run the cheating
+protocol: pick $c_j$ at random from $\{0, 1, \ldots, n\}$ and $x''_j$ at random
+from the domain of $\phi_j$. Then set $y'_j := \phi(x''_j) - c_j \cdot y_j$,
+where these operations are done in the vector space that contains the range of
+$\phi_j$, i.e. $c_j \cdot y_j$ is scalar multiplication with the scalar $c_j$.
+\item Send $y'_0$ and $y'_1$ to the challenger and obtain a $c$ in return.
+\item Set $c_i := c - c_j \pmod{n}$ and complete the protocol for $\phi_i$ by
+setting $x''_i := x'_i + c_i \cdot x_i$. These operations are done in the vector
+space that contains the range of $\phi_i$.
+\item Send $c_0, c_1, x''_0, x''_1$ to the challenger to complete the protocol.
+\end{enumerate}
+
+From the Bob's point of view, there are two $\Sigma$-protocols running in
+parallel:
+\begin{enumerate}
+\item Bob knows functions $\phi_0, \phi_1$ and claimed images
+$y_0, y_1$. He gets a pair of further values $y'_0, y'_1$ from Alice.
+\item Bob chooses a single value $c$ at random from $\{0, 1, \ldots, n-1\}$.
+\item Alice sends Bob values $c_0, c_1, x''_0, x''_1$. Bob checks the following
+equations. The first two check the individual $\Sigma$ protocols and the final
+one ensures that Alice can cheat on at most one of the protocols:
+\end{enumerate}
+\begin{eqnarray}
+\phi_0(x''_0) & = & y'_0 + c_0 \cdot y_0 \\
+\phi_1(x''_1) & = & y'_1 + c_1 \cdot y_1 \\
+c & = & c_0 + c_1 \pmod{n}
+\end{eqnarray}
+
+The argument that Alice cannot cheat in both protocols is as follows. Suppose
+Alice knows neither a preimage of $y_0$ nor of $y_1$. If there are two values
+of $c, c'$ for which she could both convince Bob then there must be some values
+$c_0, c_1, c'_0, c'_1$ that she could use to convince Bob, i.e. $c_0 + c_1 = c$
+and $c'_0 + c'_1 = c'$ (all modulo $n$). But $c \neq c'$ so at least one of
+$c_0 \neq c'_0$ or $c_1 \neq c'_1$ must hold, which implies that Alice can
+already cheat in one of the two individual $\Sigma$-protocols on its own.
+
+Of course this protocol can be made non-interactive with a hash function just
+like any $\Sigma$-protocol. The items that need to be hashed here are $y_0, y_1,
+y'_0, y'_1$ and any other constants appearing in the two protocols. Similarly,
+the same technique can be used for three or more functions --- what Alice is
+proving in each case is that she knows at least one preimage, without revealing
+which.
+
+In Helios, a voter will use this technique to prove that she either knows a
+random value $r_0$ with which she can do a Chaum-Pedersen proof that her ballot
+is an encryption of $0$, or she knows a value $r_1$ with which she can do a
+Chaum-Pedersen proof that she has encrypted $1$. The voter must produce one such
+proof for each ciphertext in her ballot.
+
+\begin{definition}
+The following is the voter's protocol for proving that a ciphertext is an
+encryption of $0$ or $1$. The voter's inputs are the parameters $(p, q, g)$,
+the election public key $pk$, the voter's ciphertext $(a, b)$, her vote $v \in
+\{0, 1\}$ and the random value $r$ that she used to encrypt her vote.
+\end{definition}
+
+\textcolor{Fuchsia}{TODO}.
+
+\begin{center}
+\begin{tabular}{ll}
+\begin{minipage}{0.45\textwidth}
+If your vote is $v = 0$:
+
+\noindent\begin{enumerate}
+\item Simulate the protocol for proving $v = 1$.
+Pick $c_1$ randomly from $\{0, 1, \ldots, n\}$ and $r''_1$ from $\mathbb Z_q$ at
+random.
+Set \[ \begin{array}{rl}
+b' := & b/g^1 \pmod{p} \\
+a'_1 := & g^{r''_1}/a^{c_1} \pmod{p} \\
+b'_1 := & pk^{r''_1}/(b')^{c_1} \pmod{p}
+\end{array} \]
+
+\item Set up the proof that $v = 0$.
+Create a value $r'_0$ from $\mathbb Z_q$ at random and set
+\[ \begin{array}{rl}
+a'_0 := & g^{r'_0} \pmod{p} \\
+b'_0 := & pk^{r'_0} \pmod{p}
+\end{array} \]
+
+\item Get the challenge for the $v = 0$ proof.
+Compute
+\[ \begin{array}{rl}
+c := & H(pk, a, b, a'_0, b'_0, a'_1, b'_1) \\
+c_0 := & c_1 - c \pmod{n}
+\end{array} \]
+
+\item Complete the $v = 0$ proof.
+Compute
+\[ \begin{array}{rl}
+r''_0 := & r'_0 + c_0 \cdot r \pmod{q}
+\end{array} \]
+
+\item Your proof $\pi$ is the tuple
+\[
+(a'_0, a'_1, b'_0, b'_1, c_0, c_1, r''_0, r''_1)
+\]
+\end{enumerate}
+\end{minipage}
+\quad & \quad
+\begin{minipage}{0.45\textwidth}
+If your vote is $v = 1$:
+
+\begin{enumerate}
+\item Simulate the protocol for proving $v = 0$.
+Pick $c_0$ randomly from $\{0, 1, \ldots, n\}$ and $r''_0$ from $\mathbb Z_q$ at
+random.
+Set \[ \begin{array}{rl}
+\\
+a'_0 := & g^{r''_0}/a^{c_0} \pmod{p} \\
+b'_0 := & pk^{r''_0}/b^{c_0} \pmod{p}
+\end{array} \]
+
+\item Set up the proof that $v = 1$.
+Create a value $r'_1$ from $\mathbb Z_q$ at random and set
+\[ \begin{array}{rl}
+a'_1 := & g^{r'_1} \pmod{p} \\
+b'_1 := & pk^{r'_1} \pmod{p}
+\end{array} \]
+
+\item Get the challenge for the $v = 1$ proof.
+Compute
+\[ \begin{array}{rl}
+c := & H(pk, a, b, a'_0, b'_0, a'_1, b'_1) \\
+c_1 := & c_0 - c \pmod{n}
+\end{array} \]
+
+\item Complete the $v = 1$ proof.
+Compute
+\[ \begin{array}{rl}
+r''_1 := & r'_1 + c_1 \cdot r \pmod{q}
+\end{array} \]
+
+\item Your proof $\pi$ is the tuple
+\[
+(a'_0, a'_1, b'_0, b'_1, c_0, c_1, r''_0, r''_1)
+\]
+\end{enumerate}
+\end{minipage}
+\end{tabular}
+\end{center}
+
+To verity such a proof, the following equations need to be checked.
+\begin{eqnarray}
+g^{r''_0} & = & a'_0 \cdot a^{c_0} \pmod{p} \\
+g^{r''_1} & = & a'_1 \cdot a^{c_1} \pmod{p} \\
+pk^{r''_0} & = & b'_0 \cdot b^{c_0} \pmod{p} \\
+pk^{r''_1} & = & b'_1 \cdot (b/g^1)^{c_1} \pmod{p} \\
+c_0 + c_1 & = & H(pk, a, b, a'_0, b'_0, a'_1, b'_1) \pmod{n}
+\end{eqnarray}
+
+This protocol is called disjunctive Chaum-Pedersen or DCP. A Helios voter
+creates one such proof per ciphertext in her ballot. If the election format
+demands that the voter choose a certain minimum/maximum number of options in a
+question (e.g. vote for at most one candidate) then the voter additionally takes
+the homomorphic sum of all her ciphertexts for the question and performs an
+additional DCP proof on the sum, showing that it is in the allowed range. This
+proof is known as the overall proof for the question.
+
 \subsubsection{Ballot privacy.}
 We can now give the full ballot privacy game that protects against dishonest
 voters.
