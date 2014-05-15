@@ -36,8 +36,11 @@ Here is one way to run a poll. Voters enter a polling station and pick up a voti
 
 To cast their ballots, voters present them to an official along with some identification. The official checks that the voter is registered at this polling station and has not cast a vote yet, but the official does not get to see the vote itself. Then the official places the ballot-envelope in a stamping machine and stamps the envelope, in such a way that the imprint of the stamp is not only visible on the envelope but also transferred to the vote card within.
 
-Voters post their ballots to a counting centre. The postal service agrees to send any correctly stamped envelope free of charge from anywhere in the country so voters can post their envelope anonymously in any post box that they choose. 
-The counting centre shuffles all received envelopes again, opens them and counts all vote cards that contain an imprint of the official stamp.
+Voters post their ballots to a counting centre. The postal service agrees to
+send any correctly stamped envelope free of charge from anywhere in the country
+so voters can post their envelope anonymously in any post box that they choose.
+The counting centre shuffles all received envelopes, opens them and counts all
+vote cards that contain an imprint of the official stamp.
 
 \subsection{Thinking about security}
 
@@ -63,7 +66,7 @@ signature on a document attests that the owner has seen and signed it.
 Similarly, the imprint of a stamp on a document attests that someone with the
 appropriate stamp has seen the document.
 
-Digital signatures differ from phyiscal ones in that they are not placed on an
+Digital signatures differ from physical ones in that they are not placed on an
 original document, modifying the original, but are separate objects that can be
 provided alongside the original. As a consequence, to prevent someone from
 transferring a signature from one document to another, digital signatures for
@@ -102,12 +105,13 @@ known as the key generation, signing and verification algorithms and satisfying
 the correctness condition below.
 
 The key generation algorithm takes no input and produces a pair of keys $(sk,
-vk) \gets \alg{KeyGen}()$ known as the signing and verification keys. The siging
-algorithm takes a signing key $sk$ and a message $m$ as inputs and produces a
-signature $\sigma \gets \alg{Sign}(sk, m)$. The verification algorithm must be
-deterministic. It takes a verification key $vk$, a message $m$ and a signature
-$\sigma$ as inputs and returns $0$ or $1$. We say that $\sigma$ is a (valid)
-signature for $m$ under key $vk$ if $\alg{Verify}(vk, m, \sigma) = 1$.
+vk) \gets \alg{KeyGen}()$ known as the signing and verification keys. The
+signing algorithm takes a signing key $sk$ and a message $m$ as inputs and
+produces a signature $\sigma \gets \alg{Sign}(sk, m)$. The verification
+algorithm must be deterministic. It takes a verification key $vk$, a message $m$
+and a signature $\sigma$ as inputs and returns $0$ or $1$. We say that $\sigma$
+is a (valid) signature for $m$ under key $vk$ if $\alg{Verify}(vk, m, \sigma) =
+1$.
 
 A digital signature scheme must satisfy the following correctness condition
 which means that correctly generated signatures are always valid. For any
@@ -136,8 +140,20 @@ Security games can be defined in three parts. First, the game begins with some
 setup algorithm. Secondly, we give one or more moves that the attacker can play
 in the game. Finally, we state the winning conditions for the attacker.
 
+Cryptographers use two kinds of security games. The first, which could be called
+``trace games'', are games in which the attacker wins if she does something that
+should be impossible in a secure system (like obtain someone's secret key or
+forge a signature). Here, the security definition calls a scheme secure if no
+attacker can win the game. The second type of game is the indistinguishability
+game where the attacker is asked to guess which of two things the game did. In
+an indistinguishability game, the attacker can always make a guess at random so
+the security definition says that a scheme is secure if no attacker can win the
+game with more than the probability $1/2$ of guessing at random. It will always
+be clear from our description of games and their winning conditions which type
+of game is meant.
+
 \subsubsection{Security of digital signatures.}
-An obvious property that signatures should have is that you cannot forges a
+An obvious property that signatures should have is that you cannot forge a
 signature on a message that verifies under someone else's key. We call such a
 forgery an existential forgery and we call an attacker that produces such a
 forgery a no-message attacker (we will see why in a moment). The security game
@@ -229,9 +245,9 @@ The key generation algorithm takes no input and returns a pair of keys $(sk, vk)
 message $m$ as input, the signer algorithm takes a signing key $sk$ as input.
 When these two algorithms interact, the user gets a signature $\sigma \gets
 [\alg{User}(m), \alg{Signer}(sk)]$ and the signer gets no output.
-The verification algorithm is determinstic and takes a verification key, message
-and signature as input and outputs 0 or 1. We call a signature $\sigma$ valid
-for message $m$ and key $vk$ if $\alg{Verify}(vk, m, \sigma) = 1$.
+The verification algorithm is deterministic and takes a verification key,
+message and signature as input and outputs 0 or 1. We call a signature $\sigma$
+valid for message $m$ and key $vk$ if $\alg{Verify}(vk, m, \sigma) = 1$.
 
 A blind signature scheme $BS$ must have the following correctness property: for
 any message $m$, running
@@ -274,7 +290,7 @@ signatures: it prevents the attacker from submitting the same message twice. The
 winning condition is that the attacker has produced signatures on more messages
 than she has used in signing moves, so at least one of her output pairs is a
 genuine forgery. The reason for this formulation is that some blind signature
-schemes allow you to take a message signature pair $(m, \sigma)$ and create a
+schemes allow you to take a message/signature pair $(m, \sigma)$ and create a
 new signature $\sigma' \neq \sigma$ on the same message such that $(m, \sigma')$
 is still a valid message/signature pair on the same key.
 
@@ -316,7 +332,7 @@ The adversary wins if the guess is correct.
 \subsubsection{Explicit form of blind signatures.}
 The above definition of blind signatures applies to many different schemes.
 Some of these schemes have a more explicit form however that is easier to work
-with in cryptographic proofs. We follow the presentation of Fujoka et al. \cite{FOO92} since we are working towards their voting protocol; a blind signature scheme that has an explicit form is for example the one of Chaum \cite{C85}.
+with in cryptographic proofs. We follow the presentation of Fujioka et al. \cite{FOO92} since we are working towards their voting protocol; a blind signature scheme that has an explicit form is for example the one of Chaum \cite{C85}.
 
 \begin{definition}
 A blind signature scheme in explicit form is a tuple
@@ -440,7 +456,7 @@ the time, the pair $(N, d)$ suffices to work with though.
 \textcolor{Fuchsia}{Is $2^{16}+1$ the common $e$? CHECK.}
 
 \subsubsection{RSA signatures and blind signatures.}
-To sign a message $m \in \mathbb Z^*_N$ (without blinding) with a RSA private
+To sign a message $m \in \mathbb Z^*_N$ (without blinding) with an RSA private
 key $(N, d)$ and public key $(N, e)$, you compute
 \[
 \alg{Sign}((N, d), m) := m^d \pmod{N}
@@ -471,7 +487,7 @@ Let us check correctness of the blind signature. We have
 \sigma^e = (s/u)^e = ((m \cdot r^e)^d)^e = m^{e \cdot d} (r^{e \cdot d})^e =
 1 \cdot 1^e = 1 \pmod{N}
 \]
-Note that $\sigma$ is exactly the standard RSA signature on $m$ for verfication
+Note that $\sigma$ is exactly the standard RSA signature on $m$ for verification
 key $(N, e)$.
 
 \subsubsection{Commitment schemes.}
@@ -560,7 +576,7 @@ scheme was also the one that we motivated in the informal example above and has
 the convenient abbreviation FOO.
 
 The FOO protocol uses two administrators, a counter who publishes all ballots
-sent to her and an authority who checks voters' elegibility and can produce
+sent to her and an authority who checks voters' eligibility and can produce
 blind signatures. Voters must be able to talk anonymously to the counter; this
 requirement could be achieved with cryptographic tools that we will introduce
 later such as mix-nets.
@@ -727,7 +743,7 @@ The judge checks the signature on the disputed ballot; if it verifies and the
 counter still refuses then the counter is exposed as a cheater. The same applies
 to opening keys $k$ where the judge checks using the opening algorithm.
 
-\item The counter accepts an illegitimate ballot without a valid signature).
+\item The counter accepts an illegitimate ballot (without a valid signature).
 
 The judge checks the signature; if it fails the counter is exposed as a cheater.
 The same applies to opening information.
@@ -826,7 +842,7 @@ Alice, a famous cryptographer, wishes to announce the birth of her child to her 
 Further, suppose this is Alice's second child and her last child was a girl. If Eve can compare Alice's ciphertext with the ciphertext she sent to her family to announce the birth of her last child and the two ciphertexts turn out to be identical, Eve might be able to conclude that Alice encrypted the same message both times without ever decrypting anything. If Alice is using an asymmetric scheme, Eve can even encrypt any messages she likes herself under Alice's family's public keys and compare the ciphertexts to the one sent by Alice. So another condition on asymmetric encryption must be that if you encrypt the same message twice, you get different ciphertexts each time and if you are given two ciphertexts, you cannot tell whether they encrypt the same message or not.
 
 The first security requirement for encryption is known as indistinguishability
-under chosen plaintext attack, abbreviated IND-CPA. Here, the attacker mey chose
+under chosen plaintext attack, abbreviated IND-CPA. Here, the attacker may chose
 any two messages, send them to the security game and get an encryption of one of
 them back; a scheme is called IND-CPA secure if she cannot tell which message
 the security game chose to encrypt.
@@ -862,7 +878,8 @@ condition is vacuous.
 
 \textcolor{Fuchsia}{Introduce NM and CCA here? Put instantiation (ElGamal) here or in separate section?}
 
-\subsection{Homomorphic encryption.}
+\subsection{Homomorphic encryption}
+
 A homomorphic encryption scheme offers an additional algorithm \alg{Add} that takes two ciphertexts and a public key and produces a new ciphertext for the ``sum'' of the two messages in the original ciphertexts. We put ``sum'' in quotes because the principle can be applied to different operations such as multiplication as well.
 
 \begin{definition}
@@ -923,7 +940,7 @@ product and it is considered to be hard to compute in general; computing it for
 random $h, k$ is the computational Diffie-Hellman problem. For random $h, k$ and
 another group element $z$, it is even considered hard to tell whether $z = h
 \otimes k$ or $z$ is just another random group element, this is called the
-computational Diffie-Hellman problem. However, if you are given the integer $a$
+decisional Diffie-Hellman problem. However, if you are given the integer $a$
 (from which you could easily compute $h = g^a$ in $G$) then you can easily take
 the Diffie-Hellman product with any $k$ as $h \otimes k = k^a \pmod{p}$.
 
@@ -946,15 +963,15 @@ represented as a subgroup of $\mathbb Z^*_p$. This can lead to some confusion
 in implementations --- Cortier and Smyth \cite{CS???} identified a bug in an
 early version of the Helios voting system which mixed up the two. The rule to
 remember is, always reduce group elements modulo $p$ and integers (exponents)
-modulo $q$. This is why you pick your secret key from $\mathbb Z_q$ (it's in
-integer) and then compute the public key modulo $p$ (a group element).
+modulo $q$. This is why you pick your secret key from $\mathbb Z_q$ (it's an
+integer) and then compute the public key (a group element) modulo $p$.
 
 Secondly, there are other possible realisations of cryptographically useful
 prime-order groups in which the Diffie-Hellman product and discrete logarithms
 are assumed to be hard. The most popular alternative uses a representation on an
 elliptic curve over a finite field; we will not go into details of the
 construction in this work but the ElGamal encryption scheme works identically
-whether you are useing a $\mathbb Z^*_p$ group or an elliptic curve group.
+whether you are using a $\mathbb Z^*_p$ group or an elliptic curve group.
 
 \subsubsection{ElGamal.}
 The ElGamal encryption scheme \cite{E85} was invented in 1985.
@@ -971,7 +988,7 @@ The ciphertext is the pair $(c, d)$.
 \end{enumerate}
 Since $m = d/(c \otimes y)$, the decryptor can compute $m$ with her secret key;
 for anyone else extracting the message is equivalent to solving the
-computational Diffie-Hellman problem and telling which of two messages was
+computational Diffie-Hellman problem. Telling which of two messages was
 encrypted (the IND-CPA security game) is equivalent\footnotemark\ to solving the
 decisional Diffie-Hellman problem.
 \footnotetext{To be exact, there is a loss of a factor $1/2$ due to a conversion
@@ -999,7 +1016,7 @@ for ciphertexts $(c, d)$ and $(c', d')$ we can set
 \]
 such that for messages $m, m'$ in $G$ we get a ciphertext for $m \cdot m'
 \pmod{p}$. What we would really like for voting is a scheme where messages lie
-in the additive group $\mathbb Z_q$ and we can perform homomprphic addition,
+in the additive group $\mathbb Z_q$ and we can perform homomorphic addition,
 rather than multiplication, of ciphertexts. If our messages are restricted to
 small integers (indeed, in our ballots they will be wither $0$ or $1$) then we
 can use a variation called exponential ElGamal: to encrypt an integer $m$,
@@ -1157,7 +1174,7 @@ election result is the number of votes that A, B and C each got, from which one
 can form the sum and determine the turnout and the percentage of votes that each
 candidate got.
 
-A ballot will contain one ciphertext for each option (checkbox). These
+A ballot will contain one ciphertext for each checkbox. These
 ciphertexts will be encryptions of either 0 or 1. In addition, once we have
 introduced zero-knowledge proofs, each ciphertext will be accompanied by a proof
 that it really contains 0 or 1; these proofs are known as individual proofs. If
@@ -1173,11 +1190,11 @@ board based elections. Suppose there are three voters, Alice, Bob and Eve. Alice
 and Bob both cast ballots. Next, Eve reads Alice's ballot off the board and
 submits a copy of it as her own ballot. The election result is now announced as
 2 yes, 1 no: Eve knows that Alice must have voted yes and Bob no, since the two
-copied ballots must enrypt the same vote. However, in a truly private election,
+copied ballots must encrypt the same vote. However, in a truly private election,
 Eve should never be able to tell whether Alice votes yes and Bob no or the other
 way round, since these two scenarios both make the same contribution to the
 result. If the result is that everybody voted yes then Eve can deduce that Alice
-voted yes too, which is unaviodable --- the problem with ballot copying is that
+voted yes too, which is unavoidable --- the problem with ballot copying is that
 Eve can find out more than she could by just observing the result.
 
 A first reaction to this problem could be to introduce ballot weeding in the
@@ -1215,8 +1232,6 @@ hash value as Alice's (i.e. making an exact copy), this modified ballot was
 accepted by Helios without complaint. It could be detected by auditing the full
 board but code for this was not available in Helios at the time.
 
-\textcolor{Fuchsia}{TODO --- introduce the actual proofs; some $\Sigma$-theory}
-
 \subsubsection{Zero-knowledge proofs.}
 Zero-knowledge proofs are tools that allow you to prove that you have done a
 certain operation correctly, without revealing more than that fact.
@@ -1233,8 +1248,8 @@ keys.
 In this section we develop the mathematical theory of zero-knowledge proofs
 based on so-called $\Sigma$-protocols and then give the protocols used in
 Helios. Our development and presentation of $\Sigma$-protocol theory follows the
-work of Bernhard \cite{B14} and we develop the Schnorr, Chaum-Pedersen and
-disjnuctive Chaum-Pedersen (DCP) protocols.
+work of Bernhard \cite{B14} and we develop the Schnorr \cite{S??},
+Chaum-Pedersen \cite{CP??} and disjunctive Chaum-Pedersen (DCP) protocols.
 
 Consider an ElGamal keypair $(sk, pk = g^{sk} \pmod{p})$ for a group defined by
 parameters $(p, q, g)$. Suppose you want to prove that you know the secret key
@@ -1261,7 +1276,7 @@ right way. If you have two key pairs $(sk, pk)$ and $(sk', pk')$ then $sk + sk'
 Note that the operation on public keys is written as a multiplication instead of
 an addition but the secret and public keys live in isomorphic groups so they are
 really both just group operations. The map taking a secret key to a public key
-is one half of an isomprphism, the other half is the discrete logarithm
+is one half of an isomorphism, the other half is the discrete logarithm
 operation which is (hopefully) hard to compute but a well-defined map
 nonetheless. Further, if you rerandomise a secret key $sk$ with an integer $r$
 to get $sk' = r \cdot sk \pmod{q}$ then the corresponding public key is $pk' =
@@ -1286,8 +1301,8 @@ pk')$ and reveal $pk'$. Let someone pick a number $c$ between $0$ and $n - 1$
 \cdot pk^c \pmod{p}$. You then reveal $sk'' := sk' + c \cdot sk \pmod{q}$ and
 your challenger checks that $g^{sk''} = pk'' \pmod{p}$. This protocol does the
 same (and some more) than the one above with $n$ envelopes. To see why, consider
-the point of view of the challenger who knows $pk, pk'$ and $pk''$ and has just
-picked $n$. Unless you know the correct $sk$, or are able to compute such a
+the point of view of the challenger who knows $pk$ and $pk'$ and has just
+picked $c$. Unless you know the correct $sk$, or are able to compute such a
 $sk$, there is only one single value of $c$ for which you have any hope of
 providing the correct answer that will convince your challenger. Your
 probability of cheating is bounded by $1/n$ and $n$ can be chosen as large as
@@ -1295,37 +1310,41 @@ you like (up to $q-1$).
 
 Suppose that there are two distinct values of $c$, namely $c_1$ and $c_2$, for
 which you have some nonzero probability of finding a correct answer and call
-these answers $sk_1$ and $sk_2$. By a bit of linear algebra, since both answers
-are correct we must have
+these answers $sk''_1$ and $sk''_2$. By a bit of linear algebra, since both
+answers are correct we must have
 \begin{eqnarray}
-g^{sk_1} & = & pk' \cdot pk^{c_1} \pmod{p} \\
-g^{sk_2} & = & pk' \cdot pk^{c_2} \pmod{p}
+g^{sk''_1} & = & pk' \cdot pk^{c_1} \pmod{p} \\
+g^{sk''_2} & = & pk' \cdot pk^{c_2} \pmod{p}
 \end{eqnarray}
 which suggests that we divide the two, cancelling $pk'$:
 \begin{eqnarray}
-g^{sk_1} / g^{sk_2} & = & pk^{c_1} / pk^{c_2} \pmod{p} \\
-g^{sk_1 - sk_2 \pmod{q}} & = & pk^{c_1 - c_2 \pmod{q}} \pmod{p}
+g^{sk''_1} / g^{sk''_2} & = & pk^{c_1} / pk^{c_2} \pmod{p} \\
+g^{sk''_1 - sk''_2 \pmod{q}} & = & pk^{c_1 - c_2 \pmod{q}} \pmod{p}
 \end{eqnarray}
 but the exponent space is a field and $c_1, c_2$ are distinct so we can
 rearrange to get
 \begin{eqnarray}
-g^{\frac{sk_1 - sk_2}{c_1 - c_2}\pmod{q}} & = & pk \pmod{p}
+g^{\frac{sk''_1 - sk''_2}{c_1 - c_2}\pmod{q}} & = & pk \pmod{p}
 \end{eqnarray}
 and this exponent is exactly the secret key $sk$ such that $g^{sk} = pk
 \pmod{p}$.
-In other words, if you can find the answers $sk_1, sk_2$ to two different
+In other words, if you can find the answers $sk''_1, sk''_2$ to two different
 challenges $c_1, c_2$ then from this information you can compute a secret key
-$sk = \frac{sk_1 - sk_2}{c_1 - c_2}\pmod{q}$ yourself.
+$sk = \frac{sk''_1 - sk''_2}{c_1 - c_2}\pmod{q}$ yourself. Conversely, if you
+do not know the secret key $sk$ then you cannot hope to answer any two different
+challenges $c_1, c_2$ in the same protocol so your probability of cheating is at
+most $1/n$.
 
 This protocol is Schnorr's protocol \cite{S??} for proof of knowledge of a
-discrete logarithm. An additional advantage of this protocol over the envelope-
-based one is that you can pick one keypair $(pk, sk)$ and re-run the protocol
-to convince many different people that you know your secret key, picking a new
-$(pk', sk')$ keypair for each person you run the protocol with but keeping the
-same public key $pk$ all the time. (If you ever re-use a $pk'$, the two people
-that you did the protocol with using the same $pk'$ can get together and
-compute your secret key exactly as described above, unless they both happened to
-pick the same challenge which is very unlikely for large $n$.) We summarise:
+discrete logarithm. An additional advantage of this protocol over the
+envelope-based one is that you can pick one keypair $(pk, sk)$ and re-run the
+protocol to convince many different people that you know your secret key,
+picking a new $(pk', sk')$ keypair for each person you run the protocol with but
+keeping the same public key $pk$ all the time. (If you ever re-use a $pk'$, the
+two people that you did the protocol with using the same $pk'$ can get together
+and compute your secret key exactly as described above, unless they both
+happened to pick the same challenge which is very unlikely for large $n$.) We
+summarise:
 
 \begin{proposition}
 Any person that can convince a challenger with more than $1/n$ probability in
@@ -1343,7 +1362,7 @@ if he only got her public key $pk$ in the first place?
 
 The answer is of course ``no'' --- at least if Bob picks his challenge randomly.
 What Bob gets to see in this protocol is a new public key $pk'$ and a secret key
-$sk''$ for a $n$ of his choice; we argue that Bob could just as well create
+$sk''$ for a $c$ of his choice; we argue that Bob could just as well create
 these elements himself if Alice didn't want to run the protocol with him.
 \begin{enumerate}
 \item Bob picks a value $c$ at random from $\{0, 1, \ldots, n-1\}$.
@@ -1377,8 +1396,9 @@ can however throw a spanner in the works by choosing his challenge as the value
 of a pseudorandom or hash function on input the values he has seen so far, $pk$
 and $pk'$. This breaks the ``simulation'' argument above because Bob had to
 choose his $c$ before he picked $pk'$. This is exactly why Alice needs to know
-$sk$ to convince Bob but Bob does not to simulate the protocol: when Alice is
-talking to Bob, she has to send him $pk'$ before he chooses $c$.
+$sk$ to convince Bob but Bob does not need to know $sk$ to simulate the
+protocol: when Alice is talking to Bob, she has to send him $pk'$ before he
+chooses $c$ but on his own, Bob can do it ``backwards''.
 
 Before we go on to fix this problem, we slightly abstract Schnorr's protocol
 which will come in useful when we discuss other protocols along similar lines
@@ -1414,7 +1434,7 @@ This is clearly impractical. What we want is a non-interactive proof, where
 Alice can once and for all time convince every possible Bob that her ballot is
 valid. And, almost paradoxically, the way Alice can do this is by doing exactly
 what we just argued that no Bob can be allowed to do: choose the challenge $c$
-herself as a hash value on $pk$ and $pk'$. This technique is usually attribute
+herself as a hash value on $pk$ and $pk'$. This technique is usually attributed
 to and named after Fiat and Shamir\footnotemark \cite{FS86}.
 \footnotetext{The attribution is not uncontested: others prefer to credit Blum
 with the technique.}
@@ -1426,6 +1446,7 @@ $c := H(y, b)$ where $y$ is the value of which she is proving a preimage and $b$
 is her ``commitment'', the message that she would send to Bob immediately before
 getting his challenge. $H$ is a cryptographic hash function with range $\{0, 1,
 \ldots, n-1\}$. This is a non-interactive proof of knowledge.
+
 To verify a proof $\pi = (y, b, c, d)$ you first check that $c = H(y, b)$. If
 this holds, check that $\phi(d) = b + c\cdot y$ for the function $\phi$ in
 question and accept the proof if this is the case.
@@ -1447,6 +1468,8 @@ $(pk_i, \pi_i)$.
 \end{enumerate}
 \footnotetext{You do not need to include $c$ as anyone verifying the proof must
 recompute it from $pk_i$ and $a$ anyway.}
+
+\textcolor{Fuchsia}{TODO --- hash compression?}
 
 \textcolor{Fuchsia}{TODO --- threshold encryption needs to come before proofs if
 we want to use decryption shares here.}
