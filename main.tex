@@ -1602,7 +1602,7 @@ space that contains the range of $\phi_i$.
 \item Send $c_0, c_1, x''_0, x''_1$ to the challenger to complete the protocol.
 \end{enumerate}
 
-From the Bob's point of view, there are two $\Sigma$-protocols running in
+From Bob's point of view, there are two $\Sigma$-protocols running in
 parallel:
 \begin{enumerate}
 \item Bob knows functions $\phi_0, \phi_1$ and claimed images
@@ -1732,7 +1732,7 @@ r''_1 := & r'_1 + c_1 \cdot r \pmod{q}
 \end{tabular}
 \end{center}
 
-To verity such a proof, the following equations need to be checked.
+To verify such a proof, the following equations need to be checked.
 \begin{eqnarray}
 g^{r''_0} & = & a'_0 \cdot a^{c_0} \pmod{p} \\
 g^{r''_1} & = & a'_1 \cdot a^{c_1} \pmod{p} \\
@@ -1784,6 +1784,7 @@ game immediately. The attacker wins if her guess is correct.
 \end{description}
 \end{definition}
 
+\textcolor{Fuchsia}{TODO --- talk about BPRIV of Helios}
 
 \subsection{Threshold encryption}
 
@@ -1806,7 +1807,7 @@ A $(k, n)$ threshold encryption scheme consists of a protocol \alg{KeyGen} for $
 \[
 \left(\alg{CombineKey}, \alg{Encrypt}, \alg{DecryptShare}, \alg{Combine}\right)
 \]
-the key generation protocol results in all participants obtaining a public key
+The key generation protocol results in all participants obtaining a public key
 share $pk_i$ and a secret key share $sk_i$. The key combination algorithm takes
 a list of $n$ public key shares and returns a public key $pk \gets
 \alg{CombineKey}(pk_1, \ldots, pk_n)$ or the special symbol $\bot$ to indicate
@@ -1851,7 +1852,7 @@ $pk \gets \prod_{i=1}^n pk_i \pmod{p}$.
 \item[\alg{DecryptShare}$(sk_i, c)$] An ElGamal ciphertext is a pair $c = (a, b)$. Return the share $d_i := a^{sk_i} \pmod{p}$ together with a Chaum-Pedersen proof that
 the same secret key was used for generating the public key share and the decryption share, i.e. a proof of knowledge of an element
 \[
-\{sk_i\ :\ g^{sk_i} = pk_i \pmod{p} \wedge a^{sk_i} = d_i \pmod{p} \}
+sk_i\ :\ g^{sk_i} = pk_i \pmod{p} \wedge a^{sk_i} = d_i \pmod{p}
 \]
 
 \item[\alg{Combine}]
@@ -1872,8 +1873,8 @@ elements are taken modulo $p$ whereas the integers in the exponent are taken
 modulo $q = (p-1)/2$.
 
 \subsubsection{Helios.}
-We now have all the building blocks together to describe the Helios electronic
-voting scheme.
+We now have all the building blocks to describe the Helios electronic voting
+scheme.
 
 To generate an election or poll, the authorities agree on the questions and
 options and generate parameters $(p, q, g)$. They each generate an ElGamal
@@ -1885,7 +1886,7 @@ bulletin board.
 To vote, voters obtain and check the public key. By check, we mean that they
 check the authorities' Schnorr proofs and re-run the key combination step.
 For each option ``checkbox'', the voter encrypts $g^0$ to leave the box empty
-and $g^1$ to chck it. She accompanies each ciphertext with a DCP proof that she
+and $g^1$ to check it. She accompanies each ciphertext with a DCP proof that she
 has indeed encrypted either $g^0$ or $g^1$. If the election specification
 restricts the maximum or minimum number of boxes that a voter must check for a
 question, she also makes an overall proof that the number of boxes checked lies
@@ -1940,7 +1941,7 @@ verifiability criteria.
 \begin{description}
 \item[Individual verifiability]
 Each voter can save a copy of her ballot and check that it is included in the
-final bulletin board.
+final bulletin board. This property is satisfied.
 
 \item[Eligibility verifiability]
 This depends on the election setting as eligibility information must be
@@ -1959,7 +1960,12 @@ proofs are available on the bulletin board for anyone to audit.
 \item[Ballot verifiability]
 Ballots are protected by zero-knowledge proofs attesting to the fact that they
 contain correct votes. These votes are available on the bulletin board to audit.
+This property is satisfied\footnotemark.
 \end{description}
+
+\footnotetext{This analysis refers to the version of Helios described in this
+work --- the current (v3) Helios does not satisfy ballot verifiability due to a
+bug in the implementation of the proofs.}
 
 \section{Putting it all together}
 
