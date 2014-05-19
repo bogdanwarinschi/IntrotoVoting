@@ -42,9 +42,7 @@ so voters can post their envelope anonymously in any post box that they choose.
 The counting centre shuffles all received envelopes, opens them and counts all
 vote cards that contain an imprint of the official stamp.
 
-\subsection{Thinking about security}
-
-\subsection{Cryptographic primitives}
+\subsection{Digital signatures}
 
 \begin{structure}
 \begin{itemize}
@@ -54,23 +52,31 @@ vote cards that contain an imprint of the official stamp.
 \end{itemize}
 \end{structure}
 
-\subsubsection{Digital signatures.}
-
-% DB: This is a new section (nothing to copy across like for encryption/PoKs) so
-% I'll try making a first attempt at writing something for it now.
+We will now start to develop the tools that we will use to build a cryptographic
+version of the protocol sketched in the last section. Along the way we will
+introduce the cryptographer's method of defining and reasoning about security of
+schemes and protocols.
 
 Digital signatures are the cryptographer's replacement for signatures or stamps.
 If we know what someone's signature looks like and believe that it would be hard
 for anyone but the owner to produce such a signature, the presence of such a
 signature on a document attests that the owner has seen and signed it.
 Similarly, the imprint of a stamp on a document attests that someone with the
-appropriate stamp has seen the document.
+appropriate stamp has stamped the document --- although as we will see soon this
+does not have to mean that the stamp-owner has seen the document.
 
 Digital signatures differ from physical ones in that they are not placed on an
 original document, modifying the original, but are separate objects that can be
 provided alongside the original. As a consequence, to prevent someone from
 transferring a signature from one document to another, digital signatures for
 different documents will be completely different objects.
+
+We follow the cryptographic convention of first defining a class of schemes
+(that is, digital signature schemes) and then, in a later step, defining what we
+mean when we say that a member of this class is ``secure''. Keeping
+functionality and security separate has many advantages including that we can
+reason about several different levels of security for the same class of schemes.
+We will give some examples of this relating to signature schemes in particular.
 
 To be able to create digital signatures, a signer first has to generate a pair
 of keys called the signing key (or secret key) and verification key (or public
@@ -122,23 +128,38 @@ message $m$, if you run the following sequence of algorithms then you get $b =
 \]
 \end{definition}
 
-This definition tells you what a digital signature scheme is and how to use it
-but does not yet say anything about security. It is common in cryptography to
-define a class of schemes in two parts, keeping functionality and security
-separate. This has many advantages including that we can reason about several
-different levels of security for the same class of schemes.
+We will present a concrete digital signature scheme later in this work when we
+have developed the necessary mathematics to motivate it. For now, we briefly
+change our focus to talk about security notions and models.
 
-\subsubsection{Security models.}
+\subsection{Security models}
+
 We introduce the cryptographer's viewpoint of security using digital signatures
-as an example. Security means that an attacker can not do certaing things, like
-create a signature on a document that verifies under someone else's key. To
-formalise this, it is common to define a cryptographic game which captures
-exactly what we want an attacker not to be able to do. The security definition
-is then the claim that no attacker can win the given game.
+as an example. Security means that an certain kind of attacker can not do
+certain things, like create a signature on a document that verifies under
+someone else's key.
 
-Security games can be defined in three parts. First, the game begins with some
+\subsubsection{Cryptographic games.}
+The core of a security notion, at least in this work, is a cryptographic game. A
+game formalises two main aspects of a notion. First, it defines exactly what we
+want an attacker not to be able to do: a scheme will be called secure (w.r.t. a
+notion or game) if we can show that no attacker can win the given game.
+Secondly, a game specifies what we assume the attacker can do, by giving a set
+of moves allowed in the game and conditions on when and how often the attacker
+can use them.
+
+Security games are defined in three parts. First, the game begins with some
 setup algorithm. Secondly, we give one or more moves that the attacker can play
 in the game. Finally, we state the winning conditions for the attacker.
+
+For example, the two security notions for digital signatures that we use in this
+work both start by having the game playing the role of a signer and creating a
+signature key pair. They also both end by saying that the attacker wins if she
+can forge a signature but they differ in what other signatures the attacker may
+legitimately obtain: the security notion for ``no-message'' attackers considers
+attackers that never see any valid signatures whereas ``chosen message''
+attackers may ask the signer to sign any message of their choice and win if they
+can forge a signature on a message that was never signed by the signer.
 
 Cryptographers use two kinds of security games. The first, which could be called
 ``trace games'', are games in which the attacker wins if she does something that
@@ -152,7 +173,54 @@ game with more than the probability $1/2$ of guessing at random. It will always
 be clear from our description of games and their winning conditions which type
 of game is meant.
 
-\subsubsection{Security of digital signatures.}
+\subsubsection{From games to security notions.}
+The second main ingredient in a security notion is the definition of the
+resources available to a hypothetical attacker. These resources are composed of
+two factors: first, the moves available to the attacker in the game and
+secondly, the computational resources that the attacker can use ``during her
+turns''. Thus, the difference between a security game and a security notion is
+that a game specifies an interface with which the attacker can interact but says
+nothing about the attacker herself whereas a security notion describes both a
+game and a class of attackers, usually in a statement of the form ``no attacker
+of a given class can win the given game (with more than a certain probability)''.
+
+There are two principal classes of attackers. The first are computationally
+unbounded attackers who may have unlimited resources; only a very small number
+of cryptographic constructions can be secured against unbounded attackers. This
+does not include digital signatures or indeed any scheme using a fixed-length
+secret key --- an unbounded attacker can always break such schemes by trying all
+possible keys. Commitment schemes which we will introduce later can however be
+made secure even if one of the two players involved has unbounded resources.
+
+The second class of attackers is that of polynomially bounded attackers,
+commonly called efficient attackers. This class follows the notion of efficiency
+from complexity theory: an algorithm taking a bitstring $s$ as input if there is
+some polynomial $p(x)$ such that on input a string $s$, the algorithm completes
+in at most $p(|s|)$ steps where $|s|$ is the length of $s$ in bits. This allows
+us to introduce cryptographic keys since an $n$-bit key can be chosen in $2^n$
+possible ways and $2^n$ grows much faster than any polynomial in $n$.
+
+A fully formal treatment of this approach, which can be called asymptotic
+security, gets complex very quickly. We cannot talk about the security of any
+one fixed scheme but instead have to reason about families of schemes indexed by
+a so-called security parameter, which can very informally be thought of as the
+bit-length of keys in a scheme. Further, an asymptotic security notion typically
+says that the attacker's probability of winning the game is smaller than the
+inverse of any polynomial in the security parameter, what complexity theorists
+would call a negligible function\footnotemark.
+
+\footnotetext{A negligible quantity is not the same thing as an exponentially
+small one like $2^{-n}$, but an exponentially small quantity is always
+negligible.}
+
+In this work, we largely sweep such considerations under the carpet in favour of
+a more readable (we hope) introduction to the concepts and high-level
+connections that make up a cryptographic voting scheme. For the same reason we
+omit all formal security proofs which we could not present without fully formal
+definitions.
+
+\subsection{Security of digital signatures}
+
 An obvious property that signatures should have is that you cannot forge a
 signature on a message that verifies under someone else's key. We call such a
 forgery an existential forgery and we call an attacker that produces such a
@@ -211,7 +279,25 @@ In neither of the above games would it make any difference if we gave the
 attacker an extra move to verify signatures: she already knows the verification
 key $vk$ so she can do this herself.
 
-\textcolor{blue}{DB: do UF-CMA too?}
+\subsubsection{One-time signatures.}
+There are several reasons why it is useful to define several security notions
+of increasing strength for the same class of scheme, rather than just go with
+the strongest known definition.
+For signature schemes in particular, some protocols use a construction called a
+one-time signature: a signer who has a personal signing key pair $(pk, sk)$ of
+some signature scheme generates, for each action that she perfoms in the
+protocol, a new key pair $(pk', sk')$ of a one-time signature scheme and uses
+$sk'$ to sign exactly one message whereas she signs the one-time public key
+$pk'$ under her long-term key $pk$. One reason why one might do such a
+construction is for greater anonymity: in a voting scheme, a voter could send
+her ballot with a one-time signature under $sk'$ to the ballot counting
+authority and her signature on $pk'$ to another, independent authority. The
+ballot is now anonymous in the sense that it is not linked to the voter's public
+key $pk$ but in the case of a dispute, the information held by the two
+authorities together can be used to trace the ballot.
+Since $sk'$ is only ever used once, a scheme secure under no-message attacks is
+sufficient for this application and in some cases this allows one to choose a
+more efficient signature scheme and/or reduce the signature size.
 
 \subsubsection{Blind signatures.}
 Voting is one of several applications where it is useful to be able to sign
