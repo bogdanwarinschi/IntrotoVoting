@@ -315,33 +315,38 @@ Blind signatures will require two security properties. Security for the signer
 requires that no-one can forge signatures on messages that the signer has not
 blind-signed, even though the signer will not usually know which messages she
 has signed. Security for the user (in our case, the voter) requires that the
-signer cannot learn which messages she has signed. We follow Schr\"oder and
-Unruh \cite{US11} in the definition of security properties.
+signer cannot learn which messages she has signed. We follow Fujioka et al.
+\cite{FOO92} in the definition of blind signatures and Schr\"oder and Unruh
+\cite{US11} in the definition of security properties.
 
 \begin{definition}
-A blind signature scheme $BS$ is a tuple of algorithms
+A blind signature scheme is a tuple
 \[
-BS = \left(
-\alg{KeyGen}, \alg{User}, \alg{Signer}, \alg{Verify}
-\right)
+BS = \left( \alg{KeyGen}, \alg{Blind}, \alg{Sign}, \alg{Unblind}, \alg{Verify} \right)
 \]
-The key generation algorithm takes no input and returns a pair of keys $(sk, vk)
-\gets \alg{KeyGen}$ called the signing and verification keys. \alg{User} and
-\alg{Signer} are a pair of interactive algorithms. The user algorithm takes a
-message $m$ as input, the signer algorithm takes a signing key $sk$ as input.
-When these two algorithms interact, the user gets a signature $\sigma \gets
-[\alg{User}(m), \alg{Signer}(sk)]$ and the signer gets no output.
-The verification algorithm is deterministic and takes a verification key,
-message and signature as input and outputs 0 or 1. We call a signature $\sigma$
-valid for message $m$ and key $vk$ if $\alg{Verify}(vk, m, \sigma) = 1$.
+of algorithms where \alg{Verify} is deterministic and the rest may be
+randomized. The key generation algorithm outputs a keypair $(sk, vk) \gets
+\alg{KeyGen}()$. The blinding algorithm takes a message $m$ and a verification
+key $vk$ and outputs a blinded message $b$ and an unblinding factor $u$: $(b, u)
+\gets \alg{Blind}(m, vk)$. The signing algorithm takes a signing key $sk$ and a
+blinded message $b$ and outputs a blinded signature $s \gets \alg{Sign}(b, sk)$.
+The unblinding algorithm takes a verification key $vk$, a blinded signature $s$
+and an unblinding factor $u$ and outputs a signature $\sigma \gets
+\alg{Unblind}(vk, s, u)$. The verification algorithm finally takes a
+verification key $vk$, a message $m$ and a signature $\sigma$ and outputs a bit
+$v \gets \alg{Verify}(vk, m, \sigma)$ that is 1 if the signature verifies.
 
-A blind signature scheme $BS$ must have the following correctness property: for
-any message $m$, running
+A blind singature scheme is correct if the following outputs $v = 1$ for any
+message $m$, i.e. a correctly generated signature verifies:
 \[
-(sk, vk) \gets \alg{KeyGen}();\ \sigma \gets [\alg{User}(m), \alg{Signer}(sk)];\ 
-b \gets \alg{Verify}(vk, m, \sigma)
+\begin{array}{l}
+(sk, vk) \gets \alg{KeyGen}();\ 
+(b, u) \gets \alg{Blind}(vk, m);\ 
+s \gets \alg{Sign}(sk, b);\ \\
+\sigma \gets \alg{Unblind}(vk, s, u);\ 
+v \gets \alg{Verify}(vk, m, \sigma)
+\end{array}
 \]
-returns $b = 1$.
 \end{definition}
 
 \begin{definition}
@@ -354,7 +359,8 @@ them. It also creates a list $L$ of signed messages which starts out empty. The
 attacker gets $vk$.
 
 \item[Moves] The attacker may submit a message $m$ for signing as long as
-$m \notin L$. The game runs $\sigma \gets [\alg{User}(m), \alg{Signer}(sk)]$,
+$m \notin L$. The game runs $(b, u) \gets \alg{Blind}(vk, m);$ $s \gets
+\alg{Sign}(sk, b);$ $\sigma \gets \alg{Unblind}(vk, s, u)$,
 adds $m$ to $L$ and returns the signature $\sigma$. The attacker may use this
 move as many times as she likes.
 
@@ -402,12 +408,13 @@ The game picks a bit $b$ at random from the set $\{0, 1\}$.
 \item[Moves]
 The attacker has only one move and she may use it only once. First, the attacker
 may send the game a verification key $vk$. The attacker may then choose a pair
-of messages $(m_0, m_1)$ and send them to the game. The game starts two user
-processes, the first one for $m_b$ and the second one for $m_{1-b}$, both of
-which interact with the attacker (who takes the role of signer, but may do
-anything she likes). If this results in both users getting a valid signature,
-the attacker gets the signatures $(\sigma_0, \sigma_1)$ on $m_0$ and $m_1$
-respectively.
+of messages $(m_0, m_1)$ and send them to the game.
+The game runs $(b_0, u_0) \gets \alg{Blind}(vk, m_0)$ and
+$(b_1, u_1) \gets \alg{Blind}(vk, m_1)$ and sends $(b_b, b_{1-b})$ to the
+attacker. If the attacker returns a pair $(s_b, s_{1-b})$ then the game sets
+$\sigma_0 \gets \alg{Unblind}(vk, s_0, u_0)$ and
+$\sigma_1 \gets \alg{Unblind}(vk, s_1, u_1)$. If both $\sigma_0$ and $\sigma_1$
+are valid, the game sends $(\sigma_0, \sigma_1)$ to the attacker.
 
 \item[Winning conditions]
 The adversary may make a guess for $b$ at any time. This stops the game.
@@ -415,53 +422,12 @@ The adversary wins if the guess is correct.
 \end{description}
 \end{definition}
 
-\subsubsection{Explicit form of blind signatures.}
-The above definition of blind signatures applies to many different schemes.
-Some of these schemes have a more explicit form however that is easier to work
-with in cryptographic proofs. We follow the presentation of Fujioka et al. \cite{FOO92} since we are working towards their voting protocol; a blind signature scheme that has an explicit form is for example the one of Chaum \cite{C85}.
-
-\begin{definition}
-A blind signature scheme in explicit form is a tuple
-\[
-BS = \left( \alg{KeyGen}, \alg{Blind}, \alg{Sign}, \alg{Unblind}, \alg{Verify} \right)
-\]
-of algorithms where \alg{Verify} is deterministic and the rest may be
-randomized. The key generation algorithm outputs a keypair $(sk, vk) \gets
-\alg{KeyGen}()$. The blinding algorithm takes a message $m$ and a verification
-key $vk$ and outputs a blinded message $b$ and an unblinding factor $u$: $(b, u)
-\gets \alg{Blind}(m, vk)$. The signing algorithm takes a signing key $sk$ and a
-blinded message $b$ and outputs a blinded signature $s \gets \alg{Sign}(b, sk)$.
-The unblinding algorithm takes a verification key $vk$, a blinded signature $s$
-and an unblinding factor $u$ and outputs a signature $\sigma \gets
-\alg{Unblind}(vk, s, u)$. The verification algorithm finally takes a
-verification key $vk$, a message $m$ and a signature $\sigma$ and outputs a bit
-$v \gets \alg{Verify}(vk, m, \sigma)$ that is 1 if the signature verifies.
-
-A blind singature scheme in explicit form is correct if the following outputs $v
-= 1$ for any message $m$, i.e. a correctly generated signature verifies:
-\[
-\begin{array}{l}
-(sk, vk) \gets \alg{KeyGen}();\ 
-(b, u) \gets \alg{Blind}(vk, m);\ 
-s \gets \alg{Sign}(sk, b);\ \\
-\sigma \gets \alg{Unblind}(vk, s, u);\ 
-v \gets \alg{Verify}(vk, m, \sigma)
-\end{array}
-\]
-\end{definition}
-
-From the explicit form we can reconstruct the signer and user algorithms: the
-signer algorithm receives a blinded message from the user, applies $\alg{Sign}$
-with the signing key $sk$ and sends the result back to the user. The user
-algorithm applies \alg{Blind} to the message, saves the unblinding factor $u$
-and sends the blinded message $b$ to the signer; when the user algorithm gets a
-value $s$ back from the signer it applies \alg{Unblind} using the saved factor
-$u$ and outputs the resulting blind signature (to its caller, not the signer).
-
-From this observation we could derive explicit forms of the the security games
-for blind signatures in explicit form and check that the correctness conditions
-in the two cases match up. The other way round is not possible in general as not
-all blind signature schemes have an explicit form the way we defined it.
+Our presentation of blind signatures is that of Fujioka et al. \cite{FOO92}
+that was used in their voting protocol which we are working towards. There is a
+more general notion of blind signatures where the \alg{Blind}, \alg{Unblind} and
+\alg{Sign} algorithms are replaced by interactive algorithms for the user and
+signer, however not all blind signatures of the more general type can be used
+to construct a voting protocol in the manner that we do in this work.
 
 We now turn our attention to a possible implementation of standard and blind
 digital signatures based on the famous RSA construction.
