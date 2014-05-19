@@ -2024,6 +2024,63 @@ bug in the implementation of the proofs.}
 % optional?
 \section{Mix-nets}
 
+In this final section we give a brief overview of mix-nets, the other main
+technique (beside blind signatures and homomorphic encryption) to achieve
+private and verifiable cryptographic voting schemes. An advantage of mix-nets
+over homomorphic voting is that they can handle arbitrary ballot formats
+including write-in votes.
+
+Suppose that every voter encrypts their vote with normal ElGamal (not the
+exponential variant) and posts the ciphertext on the board, along with some
+identification information (or even a digital signature) to ensure eligibility.
+Normal ElGamal can handle arbitrary bitstrings (of a fixed length) as messages
+as long as the basic group is chosen cleverly\footnotemark.
+\footnotetext{The kind of groups we presented in this work are not suitable for
+this kind of scheme, since our messages have to start out as group elements.
+ElGamal in groups defined over elliptic curves does work and is typically
+faster (for the same key-size) too.}
+Since we can no longer do homomorphic tallying, we need another way to anonymize
+ballots. Here is one: a trusted authority takes all ballots, randomly shuffles
+them and re-encrypts each one, that is for a ciphertext $(a, b)$ the authority
+generates a random $r$ from $\mathbb Z_q$ and sets
+$(a', b') := (a \cdot g^r \pmod{p}, b \cdot pk^r \pmod{p})$.
+These shuffled ciphertexts contain the same set of votes as the originals but
+the link between voter and ballot is hidden, so the shuffled ciphertexts can be
+decrypted individually.
+
+This also removes the need for zero-knowledge proofs to assert correctness of
+ballots: if someone has encrypted a $2$ in an $0/1$ question, since ballots are
+decrypted individually such invalid ballots can be discarded individually too.
+This technique does not prevent the need for non- malleable encryption to combat
+ballot-copying however so ElGamal will still need some kind of proof protecting
+the ciphertexts.
+
+If one does not have a trustworthy authority, once can take several authorities
+who each shuffle and re-encrypt all ballots in turn. As long as any one of the
+authorities is honest, this protects voters' privacy from all other authorities.
+The system is also resilient to mixers failing: a mixer who does not complete a
+mix can be simply replaced by another.
+
+Unfortunately, the scheme as described is not verifiable and in fact completely
+insecure against a cheating mixer substituting ballots of her own instead of
+returning a shuffled, re-encrypted version of her inputs. In this way, a
+dishonest mixer can arbitrarily manipulate the election results. The solution to
+this problem is clear: zero-knowledge proofs!
+
+In a real mix-net, each mixer takes a list of ciphertexts $(c_1, \ldots, c_n)$
+as input and outputs a mix $(c'_1, \ldots, c'_n)$ together with a proof $\pi$
+that the outputs are a mix of the inputs. Different mix-nets differ in the kind,
+size and efficiency of the proof: proofs of correct mixing are typically
+quite expensive to compute. Some mix-nets offer an "online/offline" mode where
+most of the work in computing a mix and a proof can be done ``offline'' before
+or during the election. This work involves choosing random values $r_1, \ldots,
+r_n$ for some upper bound $n$ of the number of ballots expected and a
+permutation $p$ on the set $\{1, \ldots, n\}$, then pre-computing as much of the
+proof as possible without the actual ciphertexts. At the end of the election,
+the pre-computed values can then be applied more efficiently to the ciphertexts
+forming the ballots in an ``online'' phase, returning the permuted and
+rerandomised ballots and the proof of correct mixing.
+
 \begin{thebibliography}{XXX11}
 
 \bibitem[DH76]{DH76}
