@@ -960,7 +960,7 @@ is $x$ and your public key is $y$.
 
 Two comments on this scheme are in order. First, the group has order $q$ but is
 represented as a subgroup of $\mathbb Z^*_p$. This can lead to some confusion
-in implementations --- Cortier and Smyth \cite{CS???} identified a bug in an
+in implementations --- Cortier and Smyth \cite{CS13} identified a bug in an
 early version of the Helios voting system which mixed up the two. The rule to
 remember is, always reduce group elements modulo $p$ and integers (exponents)
 modulo $q$. This is why you pick your secret key from $\mathbb Z_q$ (it's an
@@ -1185,7 +1185,7 @@ described, allowing for multiple questions in a poll or multiple races in an
 election.
 
 \subsubsection{Attacks against the ballot format and ballot weeding.}
-Cortier and Smyth \cite{CS???} pointed out the following problem with bulletin
+Cortier and Smyth \cite{CS13} pointed out the following problem with bulletin
 board based elections. Suppose there are three voters, Alice, Bob and Eve. Alice
 and Bob both cast ballots. Next, Eve reads Alice's ballot off the board and
 submits a copy of it as her own ballot. The election result is now announced as
@@ -1248,8 +1248,8 @@ keys.
 In this section we develop the mathematical theory of zero-knowledge proofs
 based on so-called $\Sigma$-protocols and then give the protocols used in
 Helios. Our development and presentation of $\Sigma$-protocol theory follows the
-work of Bernhard \cite{B14} and we develop the Schnorr \cite{S??},
-Chaum-Pedersen \cite{CP??} and disjunctive Chaum-Pedersen (DCP) protocols.
+work of Bernhard \cite{B14} and we develop the Schnorr \cite{S91},
+Chaum-Pedersen \cite{CP92} and disjunctive Chaum-Pedersen (DCP) protocols.
 
 Consider an ElGamal keypair $(sk, pk = g^{sk} \pmod{p})$ for a group defined by
 parameters $(p, q, g)$. Suppose you want to prove that you know the secret key
@@ -1335,7 +1335,7 @@ do not know the secret key $sk$ then you cannot hope to answer any two different
 challenges $c_1, c_2$ in the same protocol so your probability of cheating is at
 most $1/n$.
 
-This protocol is Schnorr's protocol \cite{S??} for proof of knowledge of a
+This protocol is Schnorr's protocol \cite{S91} for proof of knowledge of a
 discrete logarithm. An additional advantage of this protocol over the
 envelope-based one is that you can pick one keypair $(pk, sk)$ and re-run the
 protocol to convince many different people that you know your secret key,
@@ -1496,7 +1496,7 @@ $\phi: \mathbb Z_q \to G^2$, mapping integers (1-dimensional vectors) into
 2-dimensional vectors over the group $G$.
 
 The protocol for this particular $\phi$-function was invented by Chaum and
-Pedersen \cite{CP??}. We give the exact steps to prove a decryption share
+Pedersen \cite{CP92}. We give the exact steps to prove a decryption share
 correct:
 \begin{enumerate}
 \item Inputs: ciphertext $(a, b)$, public key share $pk_i$, secret key share
@@ -1973,15 +1973,61 @@ bug in the implementation of the proofs.}
 \section{Mix-nets}
 
 \begin{thebibliography}{XXX11}
+
+\bibitem[DH76]{DH76}
+W. Diffie and M. Hellman.
+New Directions in Cryptography.
+In: IEEE Transactions on Information Theory, vol. 22, no. 6, pages 644--654, 1976.
+
+\bibitem[RSA78]{RSA78}
+R. Rivest, A. Shamir and L. Adleman.
+A method for obtaining digital signatures and public-key cryptosystems.
+In: Communications of the ACM vol. 21.2, pages 120--126, 1978.
+
+\bibitem[C85]{C85}
+D. Chaum.
+Security without Identification: Transaction Systems to make Big Brother obsolete.
+In: Communications of the ACM vol. 28.10, October 1985.
+
+\bibitem[E85]{E85}
+T. ElGamal.
+A public key cryptosystem and a signature scheme based on discrete logarithms.
+In: IEEE transactions on information theory, Pages 469-472, Volume 31, 1985.
+
+\bibitem[FS86]{FS86}
+A. Fiat and A. Shamir.
+How to prove yourself: Practical solutions to identification and signature problems.
+In: Advances in Cryptology --- CRYPTO '86, pages 186--194, 1986.
+
+\bibitem[S91]{S91}
+C. P. Schnorr.
+Efficient signature generation for smart cards.
+In: Journal of Cryptology, Volume 4, Pages 161-174, 1991.
+
+\bibitem[CP92]{CP92}
+D. Chaum and T. P. Pedersen.
+Wallet Databases with Observers.
+In: Advances in Cryptology --- CRYPTO' 92, LNCS 740, pages 89--105, 1992.
+
 \bibitem[FOO92]{FOO92}
 A. Fujioka, T. Okamoto and K. Ohta.
 A Practical Secret Voting Scheme for Large Scale Elections.
 In: ???
 
+\bibitem[BC+11]{BCPSW11}
+D. Bernhard, V. Cortier, O. Pereira, B. Smyth and B. Warinschi.
+Adapting Helios for Provable Ballot Secrecy.
+In: Proceedings of ESORICS '11, LNCS 6879, pages 335--354, 2011.
+
 \bibitem[US11]{US11}
 D. Schr\"oder and D. Unruh.
 Security of Blind Signatures Revisited.
 eprint, report 2011/316.
+
+\bibitem[CS13]{CS13}
+V. Cortier and B. Smyth.
+Attacking and fixing Helios: An analysis of ballot secrecy.
+In: Journal of Computer Security, volume 21(1), pages 89--148, 2013.
 
 \bibitem[B14]{B14}
 D. Bernhard.
