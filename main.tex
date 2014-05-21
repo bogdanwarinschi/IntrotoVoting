@@ -1123,7 +1123,7 @@ We will develop the concept of homomorphic voting in several steps, ending up
 with Helios as an example. The first step is a scheme called ``minivoting'' by
 Bernhard et al. from Esorics 2011 \cite{BCPSW11}. Minivoting is not verifiable
 and indeed is only secure against passive attackers who cannot send malformed
-ciphertexts. In a following step we will add further components to minivoting in
+ciphertexts. In a later step we will add further components to minivoting in
 order to obtain a fully secure scheme.
 
 \begin{definition}
@@ -1202,10 +1202,107 @@ minivoting scheme has ballot privacy against observers.
 
 In particular this holds for the minivoting scheme based on ElGamal.
 
+\subsection{Threshold encryption}
+
+Minivoting used a single authority which is bad for two reasons. First, a
+dishonest authority could decrypt individual ballots. Secondly, if the authority
+loses her key, the election cannot be tallied. (We will deal with the authority
+trying to claim a false result in a later section.)
+
+Threshold schemes aim to mitigate these risks. In a $k$-out-of-$n$ threshold
+scheme, there are $n$ authorities and any subset of at least $k$ can tally the
+election. In this way, a coalition of up to $k - 1$ dishonest authorities cannot
+decrypt individual ballots (or obtain early results) whereas up to $n - k$ of
+the authorities can drop out and the election can still be tallied.
+
+In our definition of threshold schemes, the authorites run an interactive
+protocol to generate keys, as a result of which each authority obtains a public key share and a secret key share. A user of the scheme can run a key combination algorithm to obtain a single public key and encrypt messages with this. To decrypt, each authority that takes part in the decryption process produces a decryption share with her secret key and anyone can combine at least $k$ decryption shares to recover the message.
+
+\begin{definition}
+A $(k, n)$ threshold encryption scheme consists of a key generation protocol
+\alg{KeyGen} for $n$ authorities and four algorithms
+\[
+\left(\alg{CombineKey}, \alg{Encrypt}, \alg{DecryptShare}, \alg{Combine}\right)
+\]
+The key generation protocol results in all participants obtaining a public key
+share $pk_i$ and a secret key share $sk_i$. The key combination algorithm takes
+a list of $n$ public key shares and returns a public key $pk \gets
+\alg{CombineKey}(pk_1, \ldots, pk_n)$ or the special symbol $\bot$ to indicate
+invalid shares. The encryption algorithm works just like non-threshold
+encryption: $c \gets \alg{Encrypt}(pk, m)$. The decryption share algorithm takes
+a secret key share $sk_i$ and a ciphertext $c$ and outputs a decryption share
+$d_i \gets \alg{DecryptShare}(sk_i, c)$. The recombination algorithm takes a
+ciphertext $c$, a set $D = \{d_i\}_{i \in I}$ of at least $k$ decryption shares
+and outputs either a message $m$ or the symbol $\bot$ to indicate failure.
+
+The correctness condition is that for any message $m$ and any set $I$ of at
+least $k$ authorities, the following yields $d = m$:
+\[ \begin{array}{l}
+((pk_1, \ldots, pk_n), (sk_1, \ldots, sk_n)) \gets \alg{KeyGen}(); \\
+pk \gets \alg{CombineKey}(pk_1, \ldots, pk_n);\ 
+c \gets \alg{Encrypt}(pk, m); \\
+\textrm{for } i \in I:\ d_i \gets \alg{DecryptShare}(sk_i, c);\ 
+d \gets \alg{Combine}(c, \{d_i\}_{i \in I});
+\end{array} \]
+\end{definition}
+
+\subsubsection{Threshold ElGamal for $k = n$.}
+Here is an implementation of threshold encryption for $k = n$, i.e. all
+authorities must be present to decrypt. ElGamal can also be used for arbitrary
+$(k, n)$ thresholds but the construction is more complex.
+The definition below is secure against up to $n - 1$ authorities as long as they
+follow the protocol, i.e. they may compute and communicate freely ``on the
+side'' but can not deviate from the key generation protocol. We will adapt the
+system to be secure against misbehaving authorities in a later section once we
+have introduced the necessary tools.
+
+\begin{description}
+\item[\alg{KeyGen}]
+All authorities agree on or obtain common parameters $(p, q, g)$. Each authority
+then simply generates an ElGamal keypair under these parameters.
+% Each authority
+%then makes a Schnorr zero-knowledge proof of knowledge of their own secret key;
+%their public key share is their ElGamal public key together with this proof.
+
+\item[\alg{CombineKey}]
+Take all $n$ shares $pk_1, \ldots, pk_n$
+%and their proofs and check that all
+%proofs verify, otherwise output $\bot$ and halt. Then 
+and multiply them together:
+$pk \gets \prod_{i=1}^n pk_i \pmod{p}$.
+
+\item[\alg{Encrypt}] This is standard ElGamal encryption with the public key.
+
+\item[\alg{DecryptShare}$(sk_i, c)$] An ElGamal ciphertext is a pair $c = (a, b)$. Return the share $d_i := a^{sk_i} \pmod{p}$.
+% together with a Chaum-Pedersen proof that
+%the same secret key was used for generating the public key share and the decryption share, i.e. a proof of knowledge of an element
+%\[
+%sk_i\ :\ g^{sk_i} = pk_i \pmod{p} \wedge a^{sk_i} = d_i \pmod{p}
+%\]
+
+\item[\alg{Combine}]
+On input a ciphertext $c = (a, b)$ and a set of $n$ decryption shares
+$\{d_i\}_{i=1}^n$
+% with their associated proofs, check that all the proofs verify
+%and return $\bot$ if they do not. Then, 
+set $d := b / \prod_{i=1}^n d_i
+\pmod{p}$.
+\end{description}
+
+This works because
+\[
+d = b / \prod_{i=1}^n d_i = b / \prod_{i=1}^n a^{sk_i} = b / a^{\sum_{i=1}^n sk_i \pmod{q}} = b / a^{sk} \pmod{p}
+\]
+where $sk := \sum_{i=1}^n sk_i \pmod{q}$ is the secret key corresponding to the
+public key $pk$, so this is just a normal ElGamal decryption.
+We draw the reader's attention to the correct use of $p$s and $q$s: the group
+elements are taken modulo $p$ whereas the integers in the exponent are taken
+modulo $q = (p-1)/2$.
+
 \subsection{Problems with Minivoting}
 
-Minivoting is not a secure scheme if some of the participants misbehave.
-For example,
+Minivoting (even with threshold encryption) is not a secure scheme if some of
+the participants misbehave. For example,
 
 \begin{enumerate}
 \item A voter may encrypt $g^2$ to get an unfair advantage. For more complex ballots than yes/no questions, voters have even more ways to cheat.
@@ -1238,7 +1335,7 @@ have done a certain operation correctly, without revealing more than that fact.
 In this section we develop the mathematical theory of zero-knowledge proofs
 based on so-called $\Sigma$-protocols and then give the protocols used in
 Helios. Our development and presentation of $\Sigma$-protocol theory follows the
-work of Bernhard \cite{B14} and we develop the Schnorr \cite{S91},
+work of Bernhard \cite{B14}; we present the Schnorr \cite{S91},
 Chaum-Pedersen \cite{CP92} and disjunctive Chaum-Pedersen (DCP) protocols.
 \footnotetext{Formally, one can distinguish zero-knowledge ``proofs'' from
 ``arguments'' and ``proofs of knowledge'' from ``proofs of facts''. We ignore
@@ -1288,11 +1385,14 @@ right way. If you have two key pairs $(sk, pk)$ and $(sk', pk')$ then $sk + sk'
 Note that the operation on public keys is written as a multiplication instead of
 an addition but the secret and public keys live in isomorphic groups so they are
 really both just group operations. The map taking a secret key to a public key
-is one half of an isomorphism, the other half is the discrete logarithm
-operation which is (hopefully) hard to compute but a well-defined map
-nonetheless. Further, if you rerandomise a secret key $sk$ with an integer $r$
-to get $sk' = r \cdot sk \pmod{q}$ then the corresponding public key is $pk' =
-pk^r \pmod{p}$ where $pk$ was the public key corresponding to $sk$.
+is an isomorphism, its inverse is the discrete logarithm operation which is
+(hopefully) hard to compute but a well-defined map nonetheless. Further, if you
+rerandomise a secret key $sk$ with an integer $r$ to get $sk' = r \cdot sk
+\pmod{q}$ then the corresponding public key is $pk' = pk^r \pmod{p}$ where $pk$
+was the public key corresponding to $sk$.
+
+\begin{maths}
+\subsubsection{On linearity.}
 To speak of a linear map we actually need a vector space over a field; since we
 are working in a prime-order cyclic group $\mathbb Z_q$ for the exponents we may
 embed this into the finite field $\mathbb F_q$ by adjoining the obvious field
@@ -1305,6 +1405,7 @@ that our map commutes with vector addition; rerandomising a key is field
 multiplication and together these two properties show linearity. Why we do all
 this should become clear later when we construct $\Sigma$-protocols on
 statements involving vectors which are tuples of group elements.
+\end{maths}
 
 With these foundations in place, here is a protocol to prove that you know a
 secret key $sk$ matching a given public key $pk$. Pick a second keypair $(sk',
@@ -1316,7 +1417,7 @@ same (and some more) than the one above with $n$ envelopes. To see why, consider
 the point of view of the challenger who knows $pk$ and $pk'$ and has just
 picked $c$. Unless you know the correct $sk$, or are able to compute such a
 $sk$, there is only one single value of $c$ for which you have any hope of
-providing the correct answer that will convince your challenger. Your
+providing the correct answer that will convince your challenger. The
 probability of cheating is bounded by $1/n$ and $n$ can be chosen as large as
 you like (up to $q-1$).
 
@@ -1342,10 +1443,12 @@ and this exponent is exactly the secret key $sk$ such that $g^{sk} = pk
 \pmod{p}$.
 In other words, if you can find the answers $sk''_1, sk''_2$ to two different
 challenges $c_1, c_2$ then from this information you can compute a secret key
-$sk = \frac{sk''_1 - sk''_2}{c_1 - c_2}\pmod{q}$ yourself. Conversely, if you
-do not know the secret key $sk$ then you cannot hope to answer any two different
-challenges $c_1, c_2$ in the same protocol so your probability of cheating is at
-most $1/n$.
+$sk = \frac{sk''_1 - sk''_2}{c_1 - c_2}\pmod{q}$ yourself. This property is
+called ``special soundness''. Conversely, if you do not know the secret key $sk$
+then you cannot hope to answer any two different challenges $c_1, c_2$ in the
+same protocol so your probability of cheating is at most $1/n$. This inability
+for Alice to cheat (except with a tiny probability) is called ``soundness'' of
+the protocol. Special soundness implies soundness.
 
 This protocol is Schnorr's protocol \cite{S91} for proof of knowledge of a
 discrete logarithm. An additional advantage of this protocol over the
@@ -1355,15 +1458,15 @@ picking a new $(pk', sk')$ keypair for each person you run the protocol with but
 keeping the same public key $pk$ all the time. (If you ever re-use a $pk'$, the
 two people that you did the protocol with using the same $pk'$ can get together
 and compute your secret key exactly as described above, unless they both
-happened to pick the same challenge which is very unlikely for large $n$.) We
-summarise:
+happened to pick the same challenge which is very unlikely for large $n$.)
+A cryptographer would say that Schnorr's protocol is a ``proof of knowledge'' of
+a value $sk$ such that $g^{sk} = pk \pmod{p}$ because the protocol satisfies
+the following condition:
 
 \begin{proposition}
 Any person that can convince a challenger with more than $1/n$ probability in
 Schnorr's protocol (for challenges from $\{0, \ldots, n-1\}$ and public key
-$pk$) can also compute a secret key $sk$ that matches $pk$. A cryptographer
-would say that Schnorr's protocol is a ``proof of knowledge'' of a value $sk$
-such that $g^{sk} = pk \pmod{p}$.
+$pk$) can also compute a secret key $sk$ that matches $pk$.
 \end{proposition}
 
 Suppose that Alice is using Schnorr's protocol to prove to Bob that she knows
@@ -1384,22 +1487,23 @@ computes $pk'' := g^{sk''} \pmod{p}$.
 \end{enumerate}
 The triple $(pk', c, sk'')$ looks exactly like one that would be generated if
 Bob did Schnorr's protocol with Alice; in particular the verification equation
-holds: $g^{sk''} = pk' \cdot pk^c \pmod{p}$ from the definition of $pk'$ and
-$c, pk', sk''$ are uniformly random subject to this equation holding.
-So Schnorr's protocol gives Bob no more information about Alice's key than he
-could already compute by himself. Another way of phrasing this argument is that
-if Alice does the protocol with Bob and Carol observes this, the protocol
-convinces Bob but it cannot convince Carol: Alice and Bob could be working
-together to cheat Carol. To do this, Alice could pick any public key for which
-she does not know the secret key, Bob could create values as above and agree
-them with Alice beforehand and they could run the protocol together on these
-values.
+holds: $g^{sk''} = pk' \cdot pk^c \pmod{p}$ from the definition of $pk'$ and $c,
+pk', sk''$ are uniformly random subject to this equation holding. So Schnorr's
+protocol gives Bob no more information about Alice's key than he could already
+compute by himself, if Bob chooses his challenge randomly. This property of the
+protocol is called ``honest verifier zero-knowledge''.
 
 \begin{proposition}
 If Bob picks his challenge $c$ randomly, he gains no information from a run of
-Schnorr's protocol with Alice. A cryptographer would say that Schnorr's
-protocol is ``zero-knowledge'' for honest verifiers.
+Schnorr's protocol with Alice.
 \end{proposition}
+
+Another way of phrasing this argument is that if Alice does the protocol with
+Bob and Carol observes this, the protocol convinces Bob but it cannot convince
+Carol: Alice and Bob could be working together to cheat Carol. To do this, Alice
+could pick any public key for which she does not know the secret key, Bob could
+create values as above and agree them with Alice beforehand and they could run
+the protocol together on these values.
 
 The bit about honest verifiers --- Bob picking his challenge randomly --- is not
 just a technicality. For sure, it cannot help Bob to choose his challenge in a
@@ -1415,14 +1519,12 @@ chooses $c$ but on his own, Bob can do it ``backwards''.
 Before we go on to fix this problem, we slightly abstract Schnorr's protocol
 which will come in useful when we discuss other protocols along similar lines
 such as Chaum-Pedersen. The flow of messages in Schnorr's protocol can be drawn
-to look like the Greek letter $\Sigma$ which prompted Cramer to call such
-protocols ``$\Sigma$-protocols''.
+to look like the Greek letter $\Sigma$ which prompted Cramer \cite{C96} to call
+such protocols ``$\Sigma$-protocols''.
 
 \begin{definition}
-A $\Sigma$-protocol is a zero-knowledge (against honest verifiers) proof of
-knowledge of a preimage of a linear map $\phi$ (over some field $\mathbb F$),
-after the following template if Alice wishes to prove knowledge of a preimage
-$x: y = \phi(x)$ of a value $y$ to Bob.
+A $\Sigma$-protocol is a protocol after the following template for Alice to
+prove knowledge of a preimage $x: y = \phi(x)$ of a value $y$ to Bob.
 \begin{enumerate}
 \item Alice samples a random $a$ from the domain of $\phi$, sets $b := \phi(a)$
 and sends $b$ to Bob. We assume that Bob already knows $y$, alternatively Alice
@@ -1436,7 +1538,16 @@ in the $\mathbb F$--vector space of which $y$ is an element ($c \cdot y$ is
 scalar multiplication; $c$ is a field element).
 \end{enumerate}
 \end{definition}
-A $\Sigma$-protocol gives Alice no more than a $1/n$ probability of cheating.
+
+A $\Sigma$-protocol gives Alice no more than a $1/n$ probability of cheating and
+Bob, if he chooses his challenge randomly, no advantage in finding Alice's
+preimage.
+
+\begin{proposition}
+A $\Sigma$-protocol derived from the template above is a honest verifier zero-knowledge proof of knowledge of a preimage of a linear map $\phi$ (over
+some field $\mathbb F$).
+\end{proposition}
+
 
 We have a second problem beyond Bob not choosing a random $c$. If Alice wants to
 use a zero-knowledge proof to convince everyone that her ballot is valid, using
@@ -1449,7 +1560,7 @@ what we just argued that no Bob can be allowed to do: choose the challenge $c$
 herself as a hash value on $pk$ and $pk'$. This technique is usually attributed
 to and named after Fiat and Shamir\footnotemark \cite{FS86}.
 \footnotetext{The attribution is not uncontested: others prefer to credit Blum
-with the technique.}
+with the technique \cite{BR93}.}
 
 \begin{definition}
 The Fiat-Shamir transformation of a $\Sigma$-protocol is the protocol in which
@@ -1464,27 +1575,34 @@ this holds, check that $\phi(d) = b + c\cdot y$ for the function $\phi$ in
 question and accept the proof if this is the case.
 \end{definition}
 
-With this definition we can give the exact steps that a Helios authority
-performs to generate her key share.
+\begin{helios}
+\subsubsection{Key generation in Helios.}
+These are the exact steps that a Helios authority performs to generate her key
+share. Helios uses $n$-out-of-$n$ threshold keys as we described eariler.
+\vspace{12pt}
+
+\noindent\hspace{6pt}\begin{minipage}{0.8\textwidth}
 \begin{enumerate}
 \item Obtain parameters $(p, q, g)$ or agree these with the other authorities.
 \item Generate a key pair by picking $sk_i$ randomly from $\mathbb Z_q$ and
-setting $pk_i := g^{sk_i} \pmod{p}$. Here $i$ is some identifier.
+setting $pk_i := g^{sk_ir} \pmod{p}$. Here $i$ is some identifier.
 \item Pick another keypair $(a, b = g^a \pmod{p})$ for the proof.
 \item Compute $c := H(pk_i, a) \pmod{q}$ where $H$ is a hash function (Helios
 uses SHA-256).
 \item Compute $d := a + c \cdot sk_i \pmod{q}$.
 \item Your public key component is $pk_i$ and its proof of
-correctness\footnotemark is $\pi_i = (b, d)$. Your public key share is
+correctness is $\pi_i = (c, d)$. Your public key share is
 $(pk_i, \pi_i)$.
 \end{enumerate}
-\footnotetext{You do not need to include $c$ as anyone verifying the proof must
-recompute it from $pk_i$ and $a$ anyway.}
+\end{minipage}\vspace{12pt}
 
-\textcolor{Fuchsia}{TODO --- hash compression?}
+The value $a$ is omitted from the proof as the verifier can recompute it using
+the verification equation as $a = g^d/(pk_i)^c \pmod{p}$ and then check that $c
+= H(pk_i, a)$. This variation is equivalent to the one we gave above, i.e.
+zero-knowledge and a proof of knowledge, but saves one group element per proof.
+\end{helios}
 
-\textcolor{Fuchsia}{TODO --- threshold encryption needs to come before proofs if
-we want to use decryption shares here.}
+\subsection{Chaum-Pedersen: proving correct decryption}
 
 To prove that you have decrypted a ciphertext correctly, you need to show that
 you have produced a value $d$ such that $d = a^{sk_i} \pmod{p}$ where $sk_i$ is
@@ -1542,23 +1660,21 @@ protocol, someone who has decrypted incorrectly cannot cheat (with more than
 $1/n$ probability) even if they have unlimited resources and can even take
 discrete logarithms. For the non-interactive protocol, the security analysis
 depends on the hash function but we still get the property that no realistic
-attacker can produce a proof of a false decryption.
+attacker can produce a proof of a false decryption. This property is called
+``soundness''.
 
 \begin{proposition}
-$\Sigma$-protocols following our definition are sound, that is it is infeasible
-to produce a proof (whether interactive or non-interactive) for a value not in
-the image of the $\phi$-function.
+In a $\Sigma$-protocol following our construction, it is infeasible to produce a
+proof (whether interactive or non-interactive) for a value not in the image of
+the $\phi$-function.
 \end{proposition}
 
-\textcolor{Fuchsia}{TODO: confirm that interactive CP is sound against unbounded
-adversaries (should follow from special soundness), what happens in the RO case
-(and do we bother mentioning it)?}
+\subsection{DCP: proving that a vote is valid}
 
-We come to our third and final $\Sigma$-protocol used in the Helios voting
-scheme. This one is for the voter to prove that she encrypted a valid vote in
-her ballot (namely $0$ or $1$ in each ciphertext), without revealing the vote.
-ElGamal encryption of a message $m$ with random value $r$, in the exponential
-version used by Helios, can be expressed by the formula
+We come to our third and final $\Sigma$-protocol. This one is for the voter to
+prove that she encrypted a valid vote in her ballot (namely $0$ or $1$), without
+revealing the vote. ElGamal encryption of a message $m$ with random value $r$,
+in the exponential version used by Helios, can be expressed by the formula
 \[
 c = \phi(m, r) := (g^r \pmod{p}, g^m pk^r \pmod{p})
 \]
@@ -1567,36 +1683,35 @@ $\phi: (\mathbb Z_q)^2 \to G^2$
 where $g, p, q$ and $pk$ are taken to be constants.
 This immediately yields a $\Sigma$-protocol to prove knowledge of your vote and
 randomness but does not prove that your vote $m$ lies in a particular range.
-Let us consider how you would prove that you had voted for a particular value
-of $m$. If your ciphertext is $(a, b) = (g^r \pmod{p}, g^m pk^r \pmod{p})$ then
-you could divide out $g^m$ again to get $(a, b') = (a, b/g^m \pmod{p})$ which
+Let us consider how Alice would prove that she had voted for a particular value
+of $m$. If her ciphertext is $(a, b) = (g^r \pmod{p}, g^m pk^r \pmod{p})$ then
+she could divide out $g^m$ again to get $(a, b') = (a, b/g^m \pmod{p})$ which
 is the image of the linear function
 \[
 \phi': \mathbb Z_q \to G^2, r \mapsto (g^r \pmod{p}, pk^r \pmod{p})
 \]
-In other words, to prove that $(a, b)$ is a ciphertext for $m$ you can prove
-that you know a preimage $r$ of $(a, b/g^m \pmod{p})$ under the function
+In other words, to prove that $(a, b)$ is a ciphertext for $m$ Alice can prove
+that she knows a preimage $r$ of $(a, b/g^m \pmod{p})$ under the function
 $\phi'$. This is of course exactly the protocol of Chaum and Pedersen with $pk$
 playing the role of the second basis (instead of $a$ in our last discussion).
 
-There is a general construction to prove that you know a preimage of (at least)
-one of two linear functions for given images, without revealing which. Given
-linear functions $\phi_0, \phi_1$ and values $y_0, y_1$ in their respective
-domains, to prove that you know $x_0: \phi_0(x_0) = y_0$ or
-$x_1: \phi_1(x_1) = y_1$ you run the following protocol.
+There is a general construction for Alice to prove that she knows a preimage of
+(at least) one of two linear functions for given images, without revealing
+which. Given linear functions $\phi_0, \phi_1$ and values $y_0, y_1$ in their
+respective domains, to prove that she knows $x_0: \phi_0(x_0) = y_0$ or $x_1:
+\phi_1(x_1) = y_1$ Alice runs the following protocol.
 \begin{itemize}
 \item Start running the $\Sigma$-protocols for both functions.
-\item The challenger picks a single challenge $c$ from $\{0, 1, \ldots, n-1\}$.
-\item For each of the two protocols, you produce a new challenge $c_i$ and a
+\item Get Bob to pick a single challenge $c$ from $\{0, 1, \ldots, n-1\}$.
+\item For each of the two protocols, produce a new challenge $c_i$ and a
 final value $x''_i$ such that both protocols are correct individually and $c =
 c_1 + c_2 \pmod{n}$.
 \end{itemize}
 
-The trick is that you use the cheating approach described above where you pick
-$c$ and $x''$ first for the function where you do not have a preimage. The
-condition $c = c_1 + c_2$ where $c$ is chosen by the challenger lets you cheat
-in one of the two protocols but not both. In more detail, here is the general
-construction.
+The trick is that Alice cheats and picks $c$ and $x''$ first for the function
+where she does not have a preimage. The condition $c = c_1 + c_2$ where $c$ is
+chosen by the challenger lets Alice cheat in one of the two protocols but not
+both. In more detail, here is the general construction.
 
 \begin{enumerate}
 \item For the value $i$ where you know a preimage $x_i: \phi_i(x_i) = y_i$,
@@ -1643,22 +1758,32 @@ like any $\Sigma$-protocol. The items that need to be hashed here are $y_0, y_1,
 y'_0, y'_1$ and any other constants appearing in the two protocols. Similarly,
 the same technique can be used for three or more functions --- what Alice is
 proving in each case is that she knows at least one preimage, without revealing
-which.
+which. The resulting $\Sigma$-protocol is called a ``disjunctive proof'' or an
+``OR-proof''. Applied to Chaum-Pedersen proofs, the resulting protocol is called
+disjunctive Chaum-Pedersen or DCP.
 
-In Helios, a voter will use this technique to prove that she either knows a
-random value $r_0$ with which she can do a Chaum-Pedersen proof that her ballot
-is an encryption of $0$, or she knows a value $r_1$ with which she can do a
+\begin{helios}
+\subsubsection{Proofs in Helios ballots.}
+In Helios, a voter uses this technique to prove that she either knows a random
+value $r_0$ with which she can do a Chaum-Pedersen proof that her ballot is an
+encryption of $0$, or she knows a value $r_1$ with which she can do a
 Chaum-Pedersen proof that she has encrypted $1$. The voter must produce one such
 proof for each ciphertext in her ballot.
 
+If the election format demands that the voter choose a certain minimum/maximum
+number of options in a question (e.g. vote for at most one candidate) then the
+voter additionally takes the homomorphic sum of all her ciphertexts for the
+question and performs an additional DCP proof on the sum, showing that it is in
+the allowed range. This proof is known as the overall proof for the question.
+\end{helios}
+
 \begin{definition}
 The following is the voter's protocol for proving that a ciphertext is an
-encryption of $0$ or $1$. The voter's inputs are the parameters $(p, q, g)$,
-the election public key $pk$, the voter's ciphertext $(a, b)$, her vote $v \in
-\{0, 1\}$ and the random value $r$ that she used to encrypt her vote.
+encryption of $0$ or $1$. The voter's inputs are the parameters $(p, q, g)$, the
+election public key $pk$, the voter's ciphertext $(a, b) = (g^r, g^v \cdot
+pk^r)$, her vote $v \in \{0, 1\}$ and the random value $r$ that she used to
+encrypt her vote.
 \end{definition}
-
-\textcolor{Fuchsia}{TODO}.
 
 \begin{center}
 \begin{tabular}{ll}
@@ -1753,14 +1878,6 @@ pk^{r''_1} & = & b'_1 \cdot (b/g^1)^{c_1} \pmod{p} \\
 c_0 + c_1 & = & H(pk, a, b, a'_0, b'_0, a'_1, b'_1) \pmod{n}
 \end{eqnarray}
 
-This protocol is called disjunctive Chaum-Pedersen or DCP. A Helios voter
-creates one such proof per ciphertext in her ballot. If the election format
-demands that the voter choose a certain minimum/maximum number of options in a
-question (e.g. vote for at most one candidate) then the voter additionally takes
-the homomorphic sum of all her ciphertexts for the question and performs an
-additional DCP proof on the sum, showing that it is in the allowed range. This
-proof is known as the overall proof for the question.
-
 \begin{helios}
 \subsubsection{The Helios ballot format.}
 Homomorphic ballots are possible not just for yes/no questions but for a number
@@ -1839,8 +1956,13 @@ board but code for this was not available in Helios at the time.
 
 \subsection{Ballot privacy}
 
-We can now give the full ballot privacy game that protects against dishonest
-voters.
+With zero-knowledge proofs in ballots, everyone can be assured that voters are
+casting ballots for valid votes. To model what security level this yields, we
+give the full ballot privacy game that protects against dishonest voters. It
+differs from the previous notion of privacy against observers in that the
+attacker can declare any voters she likes to be dishonest and provide them with
+arbitrary ballots. This accounts for both attempts at making ``bad ballots'' and
+ballot-copying or modifying existing ballots and resubmitting them as your own.
 
 \begin{definition}
 A voting scheme has ballot privacy if no attacker can do better in the following
@@ -1873,95 +1995,126 @@ game immediately. The attacker wins if her guess is correct.
 \end{description}
 \end{definition}
 
-\textcolor{Fuchsia}{TODO --- talk about BPRIV of Helios}
+\subsection{Achieving ballot privacy with non-malleability}
 
-\subsection{Threshold encryption}
+We sketch how one would show that minivoting with zero-knowledge proofs added to
+key shares, ballots and decryption shares achieves ballot privacy. The main
+issue is that the attacker may derive one of her own ballots from that of an
+honest voter. Bernhard et al. \cite{BPW12a,BS13} have explored the connection
+between ballot privacy and ballot independence --- the property that there are
+no ``unexpected'' relations between the votes in ballots of different voters ---
+and concluded that the two are essentially the same, i.e. to achieve privacy
+one must ensure that ballots are independent.
 
-The systems described so far have all used a single authority. This is bad for
-two reasons. First, a dishonest authority could decrypt individual ballots. (She
-cannot claim a false result due to the zero-knowledge proofs however.) Secondly,
-if the authority loses her key, the election cannot be tallied.
-
-Threshold schemes aim to mitigate these risks. In a $k$-out-of-$n$ threshold
-scheme, there are $n$ authorities and any subset of at least $k$ can tally the
-election. In this way, a coalition of up to $k - 1$ dishonest authorities cannot
-decrypt individual ballots (or obtain early results) whereas up to $n - k$ of
-the authorities can drop out and the election can still be tallied.
-
-In our definition of threshold schemes, the authorites run an interactive
-protocol to generate keys, as a result of which each authority obtains a public key share and a secret key share. A user of the scheme can run a key combination algorithm to obtain a single public key and encrypt messages with this. To decrypt, each authority that takes part in the decryption process produces a decryption share with her secret key and anyone can combine at least $k$ decryption shares to recover the message.
+The model that we use to capture independence is that of non-malleable
+encryption. This can be expressed by taking the IND-CPA game and letting the
+attacker, once in the game, produce any number of ciphertexts she likes and ask
+the game to decrypt them. If the attacker has already obtained a challenge
+ciphertext, she cannot ask for the challenge ciphertext to be decrypted however.
 
 \begin{definition}
-A $(k, n)$ threshold encryption scheme consists of a protocol \alg{KeyGen} for $n$ authorities and four algorithms
-\[
-\left(\alg{CombineKey}, \alg{Encrypt}, \alg{DecryptShare}, \alg{Combine}\right)
-\]
-The key generation protocol results in all participants obtaining a public key
-share $pk_i$ and a secret key share $sk_i$. The key combination algorithm takes
-a list of $n$ public key shares and returns a public key $pk \gets
-\alg{CombineKey}(pk_1, \ldots, pk_n)$ or the special symbol $\bot$ to indicate
-invalid shares. The encryption algorithm works just like non-threshold
-encryption: $c \gets \alg{Encrypt}(pk, m)$. The decryption share algorithm takes
-a secret key share $sk_i$ and a ciphertext $c$ and outputs a decryption share
-$d_i \gets \alg{DecryptShare}(sk_i, c)$. The recombination algorithm takes a
-ciphertext $c$, a set $D = \{d_i\}_{i \in I}$ of at least $k$ decryption shares
-and outputs either a message $m$ or the symbol $\bot$ to indicate failure.
-
-The correctness condition is that for any message $m$ and any set $I$ of at
-least $k$ authorities, the following yields $d = m$:
-\[ \begin{array}{l}
-((pk_1, \ldots, pk_n), (sk_1, \ldots, sk_n)) \gets \alg{KeyGen}(); \\
-pk \gets \alg{CombineKey}(pk_1, \ldots, pk_n);\ 
-c \gets \alg{Encrypt}(pk, m); \\
-\textrm{for } i \in I:\ d_i \gets \alg{DecryptShare}(sk_i, c);\ 
-d \gets \alg{Combine}(c, \{d_i\}_{i \in I});
-\end{array} \]
-\end{definition}
-
-\subsubsection{Threshold ElGamal for $k = n$.}
-Here is an implementation of threshold encryption for $k = n$, i.e. all
-authorities must be present to decrypt. ElGamal can also be used for arbitrary
-$(k, n)$ thresholds but the construction is more complex --- the one given here
-is the one used in the Helios scheme.
+An asymmetric encryption scheme $E$ is non-malleable if no attacker can win the
+following game with better probability than $1/2$, the probability of guessing
+at random.
 
 \begin{description}
-\item[\alg{KeyGen}]
-All authorities agree on or obtain common parameters $(p, q, g)$. Each authority
-then simply generates an ElGamal keypair under these parameters. Each authority
-then makes a Schnorr zero-knowledge proof of knowledge of their own secret key;
-their public key share is their ElGamal public key together with this proof.
+\item[Setup] The game creates a keypair $(pk, sk) \gets \alg{KeyGen}()$ and
+gives the attacker the public key $pk$. The game also picks a bit $b$ randomly
+from $\{0, 1\}$ and keeps this secret.
+\item[Moves] Once in the game, the attacker may pick a pair of messages $m_0$
+and $m_1$ of the same length and send them to the game. The game
+encrypts $c \gets \alg{Encrypt} (pk, m_b)$ and returns this to the attacker.
 
-\item[\alg{CombineKey}]
-Take all $n$ shares $pk_1, \ldots, pk_n$ and their proofs and check that all
-proofs verify, otherwise output $\bot$ and halt. Then multiply them together:
-$pk \gets \prod_{i=1}^n pk_i \pmod{p}$.
-
-\item[\alg{Encrypt}] This is standard ElGamal encryption with the public key.
-
-\item[\alg{DecryptShare}$(sk_i, c)$] An ElGamal ciphertext is a pair $c = (a, b)$. Return the share $d_i := a^{sk_i} \pmod{p}$ together with a Chaum-Pedersen proof that
-the same secret key was used for generating the public key share and the decryption share, i.e. a proof of knowledge of an element
-\[
-sk_i\ :\ g^{sk_i} = pk_i \pmod{p} \wedge a^{sk_i} = d_i \pmod{p}
-\]
-
-\item[\alg{Combine}]
-On input a ciphertext $c = (a, b)$ and a set of $n$ decryption shares
-$\{d_i\}_{i=1}^n$ with their associated proofs, check that all the proofs verify
-and return $\bot$ if they do not. Then, set $d := b / \prod_{i=1}^n d_i
-\pmod{p}$.
+Once in the game, the attacker may send the game a list of any number of
+ciphertexts $(c_1, \ldots, c_n)$. If the attacker has already obtained a
+challenge ciphertext $c$, she must not include this ciphertext in her list. The
+game decrypts each ciphertext in the list and sends the attacker back the
+decrypted messages.
+\item[Winning conditions.] The attacker may make a guess at $b$ which ends the
+game. The attacker wins if she guesses correctly.
 \end{description}
+\end{definition}
 
-This works because
-\[
-d = b / \prod_{i=1}^n d_i = b / \prod_{i=1}^n a^{sk_i} = b / a^{\sum_{i=1}^n sk_i \pmod{q}} = b / a^{sk} \pmod{p}
-\]
-where $sk := \sum_{i=1}^n sk_i \pmod{q}$ is the secret key corresponding to the
-public key $pk$, so this is just a normal ElGamal decryption.
-We draw the reader's attention to the correct use of $p$s and $q$s: the group
-elements are taken modulo $p$ whereas the integers in the exponent are taken
-modulo $q = (p-1)/2$.
+This notion captures non-malleability in the following sense. Suppose that a
+scheme is malleable in that the attacker can take a ciphertext $c$ and somehow
+turn it into a different ciphertext $c'$ for a message that has some relation
+to the message in $c$ --- for example, the two ciphertexts encrypt the same
+message. Then the attacker can win the non-malleability game as follows:
 
-\subsubsection{Helios.}
+\begin{itemize}
+\item Pick any messages $m_0, m_1$ and ask for a challenge ciphertext $c$.
+\item Turn $c$ into $c'$ and ask for $c'$ to be decrypted.
+\item If the decrypted message is $m_0$, guess $b = 0$, otherwise guess $b=1$.
+\end{itemize}
+
+The exact form of the game has been shown be Bellare and Sahai \cite{BS99} to
+imply that the attacker is unable to construct any number of ciphertexts that
+have an ``unexpected'' relation with the challenge message. By ``unexpected'',
+we mean that we are glossing over the following problem: the attacker can
+always make two fresh ciphertexts $c_0$ and $c_1$ for $m_0$ and $m_1$ herself,
+this pair $(c_0, c_1)$ will then have the relation ``one of the two encrypted
+messages matches that in the challenge ciphertext''. Informally, what we want is
+that the attacker cannot construct any relation that helps her decide what is in
+the challenge ciphertext. The formal argument can be found in the cited paper
+\cite{BS99}.
+
+ElGamal on its own is homomorphic and therefore not non-malleable: an attacker
+can always add an encryption of $0$ to a challenge ciphertext to get a new
+ciphertext for the same message. ElGamal with a $\Sigma$-protocol based
+zero-knowledge proof however is non-malleable. As proven by Bernhard, Pereira
+and Warinschi \cite{BPW12b}:
+
+\begin{proposition}
+The encryption scheme obtained by combining ElGamal with a DCP proof that the
+encrypted message lies in a certain range is non-malleable.
+\end{proposition}
+
+This leads to the following proposition attesting to ballot privacy of
+minivoting with proofs. The same result extends to Helios which we will discuss
+in the next section.
+
+\textcolor{red}{TODO --- ballot weeding}
+
+\begin{proposition}
+Minivoting with proofs has ballot privacy.
+\end{proposition}
+
+\subsubsection{Side note --- CCA security.}
+Non-malleability is a strictly stronger notion of security than IND-CCA.
+There is a further, even stronger notion that is often cited as ``the correct
+notion'' for security of asymmetric encryption called CCA, security against
+``chosen-ciphertext attacks''. In this notion, the attacker can use the
+decryption move as many times as she likes, as long as she never asks to
+decrypt the challenge ciphertext. The game is usually presented in a form where
+the attacker asks one decryption at a time instead of a list at once which makes
+no difference (whereas the fact that the attacker only gets one decryption move
+is a central part of the non-malleability notion). For the purposes of building
+ballot private voting schemes, non-malleability is sufficient.
+
+\begin{helios}
+\subsubsection{On ballot privacy in Helios.}
+The original Helios security result by Bernhard et al. \cite{BCPSW11} showed
+that Helios would have ballot privacy if it employed CCA secure encryption.
+The combination of ElGamal and a DCP proof (or any other $\Sigma$-protocol with
+special soundness w.r.t the encryption randomness $r$ and the Fiat-Shamir
+transformation for the challenge) has not been shown CCA secure in a widely
+accepted model and indeed there is evidence suggesting that it is not CCA
+secure, although no proof of this has been published to date.
+
+CCA security is not necessary for ballot privacy however: the latest proofs
+\cite{BPW12a,BPW12b} achieve privacy from non-malleability alone and ElGamal +
+DCP definitely is non-malleable.
+
+However, Bernhard, Pereira and Warinschi \cite{BPW12b} have also shown that the
+currently available version 3 of Helios does not perform the zero-knowledge
+proofs of knowledge correctly, as a result of which Helios currently does not
+satisfy our notion of ballot privacy and can even be attacked in practice. The
+Helios described in this paper is a fixed version; the Helios authors have
+assured us that the upcoming Helios version 4 will contain fixed proofs.
+\end{helios}
+
+\subsection{\Sun\ Helios}
+
 We now have all the building blocks to describe the Helios electronic voting
 scheme.
 
@@ -2160,6 +2313,31 @@ A. Fujioka, T. Okamoto and K. Ohta.
 A Practical Secret Voting Scheme for Large Scale Elections.
 In: ???
 
+\bibitem[BR93]{BR93}
+M. Bellare and P. Rogaway.
+Random Oracles are Practical: A Paradigm for Designing Efficient Protocols.
+In: Proceedings of the 1st ACM conference on Computer and communications security (CCS '93), pages 62--73, 1993.
+
+\bibitem[C96]{C96}
+R. Cramer.
+Modular Design of Secure yet Practical Cryptographic Protocols.
+PhD thesis, University of Amsterdam, 1996.
+
+\bibitem[BPW12a]{BPW12a}
+D. Bernhard, O. Pereira and B. Warinschi.
+On Necessary and Sufficient Conditions for Private Ballot Submission.
+Eprint, \url{eprint.iacr.org/2012/236}
+
+\bibitem[BPW12b]{BPW12b}
+D. Bernhard, O. Pereira and B. Warinschi.
+How Not to Prove Yourself: Pitfalls of Fiat-Shamir and Applications to Helios.
+In: Advances in Cryptology --- Asiacrypt '12, LNCS 7658, pages 626--643, 2012.
+
+\bibitem[BS99]{BS99}
+M. Bellare and A. Sahai.
+Non-Malleable Encryption: Equivalence between Two Notions, and an Indisinguishability-Based Characterization.
+In: Advances in Cryptology --- CRYPTO '99, LNCS 1666, pages 519--536, 1999.
+
 \bibitem[BC+11]{BCPSW11}
 D. Bernhard, V. Cortier, O. Pereira, B. Smyth and B. Warinschi.
 Adapting Helios for Provable Ballot Secrecy.
@@ -2169,6 +2347,11 @@ In: Proceedings of ESORICS '11, LNCS 6879, pages 335--354, 2011.
 D. Schr\"oder and D. Unruh.
 Security of Blind Signatures Revisited.
 eprint, report 2011/316.
+
+\bibitem[BS13]{BS13}
+D. Bernhard and B. Smyth.
+Ballot secrecy and ballot independence coincide.
+In: Computer Security --- ESORICS '13, LNCS 8134, pages 463--480, 2013.
 
 \bibitem[CS13]{CS13}
 V. Cortier and B. Smyth.
