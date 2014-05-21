@@ -44,9 +44,9 @@
 
 \section{Introduction}
 
-This chapter aims to present voting from a cryptographer's point of view. We
-will state some security properties that one could desire of a voting scheme and
-present methods to achieve these properties using cryptography.
+Our aim is to present voting from a cryptographer's point of view. We will state
+some security properties that one could desire of a voting scheme and present
+methods to achieve these properties using cryptography.
 
 Sections giving mathematical background information are marked with a frame and
 a large $\Sigma$. Sections giving applications specific to the Helios voting
@@ -315,7 +315,8 @@ Since $sk'$ is only ever used once, a scheme secure under no-message attacks is
 sufficient for this application and in some cases this allows one to choose a
 more efficient signature scheme and/or reduce the signature size.
 
-\subsubsection{Blind signatures.}
+\subsection{Blind signatures}
+
 Voting is one of several applications where it is useful to be able to sign
 messages without knowing their content. To ensure that only authorized voters
 cast ballots, one could ask voters to authenticate themselves with an authority
@@ -500,7 +501,8 @@ the time, the pair $(N, d)$ suffices to work with though.
 \end{enumerate}
 \end{maths}
 
-\subsubsection{RSA signatures and blind signatures.}
+\subsection{A blind signature based on RSA}
+
 To sign a message $m \in \mathbb Z^*_N$ (without blinding) with an RSA private
 key $(N, d)$ and public key $(N, e)$, you compute
 \[
@@ -524,6 +526,7 @@ $y$.
 Chaum's blind signature has the user blind the message $m$ with a random value
 $r$ before sending it to the signer and strip this factor out again afterwards:
 
+\needspace{2\baselineskip}
 \begin{description}
 \item[\alg{KeyGen}:] Standard RSA key generation.
 \item[\alg{Blind}$((N, e), m)$:] pick a random $r$ from $\mathbb Z^*_N$ and set
@@ -542,7 +545,8 @@ Note that $\sigma$ is exactly the standard RSA signature on $m$ for verification
 key $(N, e)$. The security model and analysis for this scheme is due to Bellare
 and Palacio \cite{BP??}, we omit it in this work.
 
-\subsubsection{Commitment schemes.}
+\subsection{Commitment schemes}
+
 A commitment scheme is the cryptographer's equivalent of placing a message in an
 opaque envelope and placing this envelope on the table: no-one else can can read
 your message until you open the envelope but you cannot change the message that
@@ -2069,16 +2073,6 @@ The encryption scheme obtained by combining ElGamal with a DCP proof that the
 encrypted message lies in a certain range is non-malleable.
 \end{proposition}
 
-This leads to the following proposition attesting to ballot privacy of
-minivoting with proofs. The same result extends to Helios which we will discuss
-in the next section.
-
-\textcolor{red}{TODO --- ballot weeding}
-
-\begin{proposition}
-Minivoting with proofs has ballot privacy.
-\end{proposition}
-
 \subsubsection{Side note --- CCA security.}
 Non-malleability is a strictly stronger notion of security than IND-CCA.
 There is a further, even stronger notion that is often cited as ``the correct
@@ -2090,6 +2084,36 @@ the attacker asks one decryption at a time instead of a list at once which makes
 no difference (whereas the fact that the attacker only gets one decryption move
 is a central part of the non-malleability notion). For the purposes of building
 ballot private voting schemes, non-malleability is sufficient.
+
+\subsubsection{Ballot privacy of minivoting.}
+To obtain ballot privacy we need two ingredients. The first is non-malleability
+which prevents Eve from submitting a modified version of Alice's ballot as her
+own. The second ingredient is ballot weeding, a way to catch Eve if she tries to
+submit an exact copy of Alice's ballot. In a scheme with ballot weeding,
+whenever anyone submits a ballot, the bulletin board checks the ballot against
+all previous ballots and rejects it if it finds a relation. If ballots are
+non-malleable, this relation can be ``the ballot is an exact copy of a previous
+one''.
+This leads to the following proposition attesting to ballot privacy of
+minivoting with proofs.
+
+\begin{proposition}
+Minivoting with non-malleable ballots and ballot weeding for exact copies has
+ballot privacy.
+\end{proposition}
+
+The non-malleability of ElGamal with DCP gives non-malleable ballots if each
+ballot contains only a single ciphertext. Otherwise, as explained in the section
+on the Helios ballot format, Cortier/Smyth attacks \cite{CS13} in which the
+ciphertexts in a ballot get permuted might still be possible. The correct way
+to weed ballots containing multiple ElGamal+DCP ciphertexts is to check for
+repeated proofs. This extends to show ballot privacy of the version of Helios
+that we present in this work.
+
+\begin{proposition}
+Minivoting with ElGamal+DCP ciphertexts/proofs has ballot privacy if the ballot
+weeding rejects any ballot re-using a proof from an earlier ballot.
+\end{proposition}
 
 \begin{helios}
 \subsubsection{On ballot privacy in Helios.}
