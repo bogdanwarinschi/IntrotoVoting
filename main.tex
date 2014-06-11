@@ -12,6 +12,7 @@
 \usepackage{wrapfig}
 \usepackage[weather]{ifsym}
 \usepackage{needspace}
+\usepackage{tikz}
 
 \newcommand{\alg}[1]{\textup{\texttt{#1}}}
 \newenvironment{maths}{\begin{framed}
@@ -24,6 +25,21 @@
 \vspace{-18pt}
 \begin{wrapfigure}{l}{0.15\textwidth}
 \vspace{-12pt}\quad{\Huge \Sun}
+\end{wrapfigure}}{\end{framed}}
+
+\newenvironment{crypto}{\begin{framed}
+%\vspace{-18pt}
+\begin{wrapfigure}{l}{0.15\textwidth}
+\vspace{-12pt}\quad{
+\begin{tikzpicture}[scale=0.4]
+\draw[fill] (0, 0) -- (2, 0) [rounded corners] -- (2, -2)  -- (0, -2) -- (0, 0);
+\draw[line width=4pt] (0.5, 0) 
+.. controls (0.5, 1) and (0.5, 1) .. (1, 1)
+.. controls (1.5, 1) and (1.5, 1) .. (1.5, 0);
+\draw[fill=white] (1, -0.75) circle[radius=0.35];
+\path[fill=white] (0.9, -0.8) -- (0.8, -1.6) -- (1.2, -1.6) -- (1.1, -0.8);
+\end{tikzpicture}
+}
 \end{wrapfigure}}{\end{framed}}
 
 \title{Cryptographic Voting --- A Gentle Introduction}
@@ -50,7 +66,8 @@ methods to achieve these properties using cryptography.
 
 Sections giving mathematical background information are marked with a frame and
 a large $\Sigma$. Sections giving applications specific to the Helios voting
-scheme are marked with a \Sun\ symbol.
+scheme are marked with a \Sun\ symbol. Sections relating to cryptographic
+building blocks are marked with a padlock symbol.
 
 \section{First steps}
 
