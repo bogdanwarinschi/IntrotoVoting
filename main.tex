@@ -27,23 +27,12 @@
 \vspace{-12pt}\quad{\Huge \Sun}
 \end{wrapfigure}}{\end{framed}}
 
-\newcommand{\padlock}{%
-\begin{tikzpicture}[scale=0.4]
-\draw[fill] (0, 0) -- (2, 0) [rounded corners] -- (2, -2)  -- (0, -2) -- (0, 0);
-\draw[line width=4pt] (0.5, 0)
-.. controls (0.5, 1) and (0.5, 1) .. (1, 1)
-.. controls (1.5, 1) and (1.5, 1) .. (1.5, 0);
-\draw[fill=white] (1, -0.75) circle[radius=0.35];
-\path[fill=white] (0.9, -0.8) -- (0.8, -1.6) -- (1.2, -1.6) -- (1.1, -0.8);
-\end{tikzpicture}
-}
-
-\newenvironment{crypto}{\begin{framed}
-\vspace{-18pt}
-\begin{wrapfigure}{l}{0.15\textwidth}
-\vspace{-12pt}\quad{\padlock}
-\end{wrapfigure}}{\end{framed}}
-
+\newcommand{\cryptosubsection}[1]{\subsection[#1]{
+\raisebox{-3pt}{\includegraphics[height=14pt]{lock}}
+#1}}
+\newcommand{\cryptosubsubsection}[1]{\subsubsection[#1]{
+\raisebox{-3pt}{\includegraphics[height=14pt]{lock}}
+#1}}
 
 \title{Cryptographic Voting --- A Gentle Introduction}
 \author{David Bernhard and Bogdan Warinschi}
@@ -86,9 +75,7 @@ so voters can post their envelope anonymously in any post box that they choose.
 The counting centre shuffles all received envelopes, opens them and counts all
 vote cards that contain an imprint of the official stamp.
 
-\begin{crypto}
-\subsection{Digital signatures}
-
+\cryptosubsection{Digital signatures}
 We will now start to develop the tools that we will use to build a cryptographic
 version of the protocol sketched in the last section. Along the way we will
 introduce the cryptographer's method of defining and reasoning about security of
@@ -168,7 +155,6 @@ message $m$, if you run the following sequence of algorithms then you get $b =
 We will present a concrete digital signature scheme later in this work when we
 have developed the necessary mathematics to motivate it. For now, we briefly
 change our focus to talk about security notions and models.
-\end{crypto}
 
 \subsection{Security models}
 
@@ -317,9 +303,7 @@ In neither of the above games would it make any difference if we gave the
 attacker an extra move to verify signatures: she already knows the verification
 key $vk$ so she can do this herself.
 
-\begin{crypto}
-
-\subsubsection{One-time signatures.}
+\cryptosubsubsection{One-time signatures.}
 There are several reasons why it is useful to define several security notions
 of increasing strength for the same class of scheme, rather than just go with
 the strongest known definition.
@@ -338,10 +322,8 @@ authorities together can be used to trace the ballot.
 Since $sk'$ is only ever used once, a scheme secure under no-message attacks is
 sufficient for this application and in some cases this allows one to choose a
 more efficient signature scheme and/or reduce the signature size.
-\end{crypto}
 
-\begin{crypto}
-\subsection{Blind signatures}
+\cryptosubsection{Blind signatures}
 Voting is one of several applications where it is useful to be able to sign
 messages without knowing their content. To ensure that only authorized voters
 cast ballots, one could ask voters to authenticate themselves with an authority
@@ -392,7 +374,6 @@ v \gets \alg{Verify}(vk, m, \sigma)
 \end{array}
 \]
 \end{definition}
-\end{crypto}
 
 \begin{definition}
 A blind signature scheme is unforgeable (secure for the signer) if no attacker
@@ -571,8 +552,7 @@ Note that $\sigma$ is exactly the standard RSA signature on $m$ for verification
 key $(N, e)$. The security model and analysis for this scheme is due to Bellare
 and Palacio \cite{BP??}, we omit it in this work.
 
-\begin{crypto}
-\subsection{Commitment schemes}
+\cryptosubsection{Commitment schemes}
 
 A commitment scheme is the cryptographer's equivalent of placing a message in an
 opaque envelope and placing this envelope on the table: no-one else can can read
@@ -600,7 +580,6 @@ p \gets \alg{Setup}();\ %
 \]
 then $b = 1$ i.e. correctly commited messages also open correctly.
 \end{definition}
-\end{crypto}
 
 Security of commitment schemes has two parts. A commitment is hiding if you
 cannot extract a committed message from a commitment until it is opened. A
@@ -797,7 +776,7 @@ Indeed, the nature of the FOO protocol is that only eligibility is assured by
 cryptographic means alone; the other verifiability properties follow from the
 public nature of the bulletin board and counting operation. This comes at the
 cost of practicality: voters must interact with the system twice, once to cast
-their ballots and once again to opern them. Later systems such as Helios only
+their ballots and once again to open them. Later systems such as Helios only
 require voters to interact with the system once; verifiability will become a
 more involved matter here.
 
@@ -914,8 +893,7 @@ what asymmetric encryption is in the first place.
 
 \footnotetext{One pound, abbreviated lb, is around 0.454 kg.}
 
-\begin{crypto}
-\subsection{Asymmetric encryption}
+\cryptosubsection{Asymmetric encryption}
 
 Asymmetric or ``public key'' encryption is perhaps the best-known invention of
 modern cryptography. It is certainly one of the oldest: it was first suggested
@@ -951,7 +929,6 @@ c \gets \alg{Encrypt}(pk, m);\ %
 d \gets \alg{Decrypt}(sk, c)
 \]
 \end{definition}
-\end{crypto}
 \footnotetext{The design of letter-boxes varies a lot between countries; we have
 in mind the continental European style where letterboxes have a flap to insert letters and the owner can open a door on the letter-box with a key to retrieve letters.}
 
@@ -1019,8 +996,7 @@ There are stronger notions of security for encryption that we will introduce at
 the appropriate point later in this work and explain how they relate to keeping
 encrypted votes private.
 
-\begin{crypto}
-\subsection{Homomorphic encryption}
+\cryptosubsection{Homomorphic encryption}
 
 A homomorphic encryption scheme offers an additional algorithm \alg{Add} that takes two ciphertexts and a public key and produces a new ciphertext for the ``sum'' of the two messages in the original ciphertexts. We put ``sum'' in quotes because the principle can be applied to different operations such as multiplication as well.
 
@@ -1057,7 +1033,6 @@ of ciphertexts look just like ordinary ones and even the legitimate decryptor
 cannot tell a sum from a simple ciphertext. For example, if a ciphertext
 decrypts to $2$, the decryptor should not be able to tell if this was a direct
 encryption of $2$, a sum of encryptions of $0$ and $2$ or of $1$ and $1$ etc.
-\end{crypto}
 
 \begin{maths}
 \subsubsection{Prime-order groups.}
@@ -1274,8 +1249,7 @@ minivoting scheme has ballot privacy against observers.
 
 In particular this holds for the minivoting scheme based on ElGamal.
 
-\begin{crypto}
-\subsection{Threshold encryption}
+\cryptosubsection{Threshold encryption}
 
 Minivoting used a single authority which is bad for two reasons. First, a
 dishonest authority could decrypt individual ballots. Secondly, if the authority
@@ -1318,7 +1292,6 @@ c \gets \alg{Encrypt}(pk, m); \\
 d \gets \alg{Combine}(c, \{d_i\}_{i \in I});
 \end{array} \]
 \end{definition}
-\end{crypto}
 
 \subsubsection{Threshold ElGamal for $k = n$.}
 Here is an implementation of threshold encryption for $k = n$, i.e. all
@@ -1402,8 +1375,7 @@ correct ballot. ``Zero-knowledge'' means that these proofs reveal nothing
 beyond that the ballot is correct. In particular, a proof that your ballot is
 correct does not leak your vote.
 
-\begin{crypto}
-\subsection{Zero-knowledge proofs}
+\cryptosubsection{Zero-knowledge proofs}
 
 Zero-knowledge proofs\footnotemark are tools that allow you to prove that you
 have done a certain operation correctly, without revealing more than that fact.
@@ -1415,7 +1387,6 @@ Chaum-Pedersen \cite{CP92} and disjunctive Chaum-Pedersen (DCP) protocols.
 \footnotetext{Formally, one can distinguish zero-knowledge ``proofs'' from
 ``arguments'' and ``proofs of knowledge'' from ``proofs of facts''. We ignore
 these distinctions here.}
-\end{crypto}
 
 \begin{helios}
 \subsubsection{Proofs in Helios.}
