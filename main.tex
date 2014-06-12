@@ -27,20 +27,23 @@
 \vspace{-12pt}\quad{\Huge \Sun}
 \end{wrapfigure}}{\end{framed}}
 
-\newenvironment{crypto}{\begin{framed}
-%\vspace{-18pt}
-\begin{wrapfigure}{l}{0.15\textwidth}
-\vspace{-12pt}\quad{
+\newcommand{\padlock}{%
 \begin{tikzpicture}[scale=0.4]
 \draw[fill] (0, 0) -- (2, 0) [rounded corners] -- (2, -2)  -- (0, -2) -- (0, 0);
-\draw[line width=4pt] (0.5, 0) 
+\draw[line width=4pt] (0.5, 0)
 .. controls (0.5, 1) and (0.5, 1) .. (1, 1)
 .. controls (1.5, 1) and (1.5, 1) .. (1.5, 0);
 \draw[fill=white] (1, -0.75) circle[radius=0.35];
 \path[fill=white] (0.9, -0.8) -- (0.8, -1.6) -- (1.2, -1.6) -- (1.1, -0.8);
 \end{tikzpicture}
 }
+
+\newenvironment{crypto}{\begin{framed}
+\vspace{-18pt}
+\begin{wrapfigure}{l}{0.15\textwidth}
+\vspace{-12pt}\quad{\padlock}
 \end{wrapfigure}}{\end{framed}}
+
 
 \title{Cryptographic Voting --- A Gentle Introduction}
 \author{David Bernhard and Bogdan Warinschi}
@@ -66,8 +69,8 @@ methods to achieve these properties using cryptography.
 
 Sections giving mathematical background information are marked with a frame and
 a large $\Sigma$. Sections giving applications specific to the Helios voting
-scheme are marked with a \Sun\ symbol. Sections relating to cryptographic
-building blocks are marked with a padlock symbol.
+scheme are marked with a \Sun\ symbol. Sections introducing cryptographic
+concepts are marked with a padlock symbol.
 
 \section{First steps}
 
@@ -83,6 +86,7 @@ so voters can post their envelope anonymously in any post box that they choose.
 The counting centre shuffles all received envelopes, opens them and counts all
 vote cards that contain an imprint of the official stamp.
 
+\begin{crypto}
 \subsection{Digital signatures}
 
 We will now start to develop the tools that we will use to build a cryptographic
@@ -164,6 +168,7 @@ message $m$, if you run the following sequence of algorithms then you get $b =
 We will present a concrete digital signature scheme later in this work when we
 have developed the necessary mathematics to motivate it. For now, we briefly
 change our focus to talk about security notions and models.
+\end{crypto}
 
 \subsection{Security models}
 
@@ -312,6 +317,8 @@ In neither of the above games would it make any difference if we gave the
 attacker an extra move to verify signatures: she already knows the verification
 key $vk$ so she can do this herself.
 
+\begin{crypto}
+
 \subsubsection{One-time signatures.}
 There are several reasons why it is useful to define several security notions
 of increasing strength for the same class of scheme, rather than just go with
@@ -331,9 +338,10 @@ authorities together can be used to trace the ballot.
 Since $sk'$ is only ever used once, a scheme secure under no-message attacks is
 sufficient for this application and in some cases this allows one to choose a
 more efficient signature scheme and/or reduce the signature size.
+\end{crypto}
 
+\begin{crypto}
 \subsection{Blind signatures}
-
 Voting is one of several applications where it is useful to be able to sign
 messages without knowing their content. To ensure that only authorized voters
 cast ballots, one could ask voters to authenticate themselves with an authority
@@ -376,14 +384,15 @@ A blind singature scheme is correct if the following outputs $v = 1$ for any
 message $m$, i.e. a correctly generated signature verifies:
 \[
 \begin{array}{l}
-(sk, vk) \gets \alg{KeyGen}();\ 
-(b, u) \gets \alg{Blind}(vk, m);\ 
+(sk, vk) \gets \alg{KeyGen}();\ %
+(b, u) \gets \alg{Blind}(vk, m);\ %
 s \gets \alg{Sign}(sk, b);\ \\
-\sigma \gets \alg{Unblind}(vk, s, u);\ 
+\sigma \gets \alg{Unblind}(vk, s, u);\ %
 v \gets \alg{Verify}(vk, m, \sigma)
 \end{array}
 \]
 \end{definition}
+\end{crypto}
 
 \begin{definition}
 A blind signature scheme is unforgeable (secure for the signer) if no attacker
@@ -562,6 +571,7 @@ Note that $\sigma$ is exactly the standard RSA signature on $m$ for verification
 key $(N, e)$. The security model and analysis for this scheme is due to Bellare
 and Palacio \cite{BP??}, we omit it in this work.
 
+\begin{crypto}
 \subsection{Commitment schemes}
 
 A commitment scheme is the cryptographer's equivalent of placing a message in an
@@ -585,11 +595,12 @@ $b$ to indicate whether the commitment matches the message: $b \gets
 A commitment scheme must satisfy the following correctness property. For any
 message $m$, if you run
 \[
-p \gets \alg{Setup}();\ 
+p \gets \alg{Setup}();\ %
 (c, k) \gets \alg{Commit}(p, m);\ b \gets \alg{Open}(p, m, c, k)
 \]
 then $b = 1$ i.e. correctly commited messages also open correctly.
 \end{definition}
+\end{crypto}
 
 Security of commitment schemes has two parts. A commitment is hiding if you
 cannot extract a committed message from a commitment until it is opened. A
@@ -623,26 +634,22 @@ $k, k'$ (which may or may not be the same) such that \alg{Open} returns 1 on
 both triples involved.
 
 \begin{definition}
-A commitment scheme $CS = (\alg{Setup}, \alg{Commit}, \alg{Open})$ is binding if
-no attacker can win the following game.
+A commitment scheme $CS = (\alg{Setup}, \alg{Commit}, \alg{Open})$ is binding
+if no attacker can win the following game.
 
 \begin{description}
 \item[Setup]
-No setup.
+The game creates parameters $p \gets \alg{Setup}()$. The attacker gets $p$.
 
 \item[Moves]
 No moves.
 
 \item[Winning conditions]
-The attacker may provide a parameter $p$, a string $c$, two messages $m, m'$ and
-two keys $k, k'$. She wins if (1) $m \neq m'$ and (2) both $\alg{Open}(p, c, m,
-k)$ and $\alg{Open}(p, c, m', k')$ return 1.
+The attacker may provide a string $c$, two messages $m, m'$ and two keys $k,
+k'$. She wins if (1) $m \neq m'$ and (2) both $\alg{Open}(p, c, m, k)$ and
+$\alg{Open}(p, c, m', k')$ return 1.
 \end{description}
 \end{definition}
-
-\textcolor{red}{TODO --- how do we handle parameters in the binding game;
-I think if the attacker can choose the params then she can sometimes
-equivocate commitments?}
 
 Commitment is one of the few cryptographic primitives that can be built securely
 against attackers with unlimited resources, however a commitment scheme can only
@@ -736,12 +743,36 @@ counter adds the vote $v$ to the set of valid votes. Finally, the counter
 tallies all valid votes.
 \end{description}
 
-\textcolor{red}{TODO: (1) privacy (2) relate to models}
+\subsubsection{Privacy of FOO.}
+
+The FOO protocol was published in 1992, before any formal models for voting
+schemes had been developed. Consequently, the original paper only offers a
+``proof sketch'' for privacy; no-one has presented a formal analysis of privacy
+in FOO to date although there is no reason to suspect that this property would
+not hold. The modelling of anonymous channels is also not standardised; one
+could use mix-nets (discussed in Section \ref{sec:mixnet}) to achieve anonymity
+in which case the anonymity offered is well understood.
+
+We give a brief sketch of why FOO is private. Before the tallying phase, each
+voter submits a pair $(c, \sigma)$. $c$ is a commitment and thus hides the
+contained vote; $\sigma$ is a signature on the commitment so it cannot leak
+more information on the vote than the commitment itself. Even the authority
+only sees the commitment and not the vote in clear, so votes are kept private.
+
+After tallying, the votes are revealed and FOO argue that no-one, not even the
+authority and vote counter together, can link a voter to a vote. This is
+because the items on the board are posted anonymously and the only
+non-anonymous communication that might link a voter to a ballot occurs when the
+voter obtains a signature from the authority. However, the authority only sees
+a blinded commitment and the returned signature is a blind signature, so the
+authority cannot link the ballots on the board to the commitments that she has
+signed.
 
 \subsubsection{Verifiability of FOO.}
 
-We will briefly show why FOO is a verifiable protocol. Specifically, we check
-the following properties.
+To date, no formal models for verifiability exist that could be usefully
+applied to FOO.  We will briefly argue informally why FOO is a verifiable
+protocol. Specifically, we check the following properties.
 
 \begin{description}
 \item[Individual verifiability] Voters can check that their ballot was counted.
@@ -761,6 +792,14 @@ counter refuses to accept a correctly signed ballot.
 Universal verifiability is easy since the counter holds no secrets: anyone can
 repeat the count of all opened ballots. The same holds for ballot verifiability
 since the ballots are opened individually.
+
+Indeed, the nature of the FOO protocol is that only eligibility is assured by
+cryptographic means alone; the other verifiability properties follow from the
+public nature of the bulletin board and counting operation. This comes at the
+cost of practicality: voters must interact with the system twice, once to cast
+their ballots and once again to opern them. Later systems such as Helios only
+require voters to interact with the system once; verifiability will become a
+more involved matter here.
 
 For eligiblility, first note that anyone can verify that only correctly signed
 ballots are counted. If we assume that the authority is honest then only
@@ -875,6 +914,7 @@ what asymmetric encryption is in the first place.
 
 \footnotetext{One pound, abbreviated lb, is around 0.454 kg.}
 
+\begin{crypto}
 \subsection{Asymmetric encryption}
 
 Asymmetric or ``public key'' encryption is perhaps the best-known invention of
@@ -886,9 +926,6 @@ There are many ways to explain asymmetric encryption using physical terms: our
 favourite example is a letter-box. Anyone can send you letters by placing them
 in your letter-box but only you can get letters out of the box again\footnotemark. Indeed, once someone has placed a letter in your letter-box, even
 they can't get it out again.
-
-\footnotetext{The design of letter-boxes varies a lot between countries; we have
-in mind the continental European style where letterboxes have a flap to insert letters and the owner can open a door on the letter-box with a key to retrieve letters.}
 
 As for digital signatures, we
 define the types of algorithms required and the security requirements.
@@ -909,11 +946,15 @@ the special output symbol $\bot$. The decryption algorithm must be deterministic
 The correctness condition is that for any message $m$, the following operations
 result in $d = m$:
 \[
-(pk, sk) \gets \alg{KeyGen}();\ 
-c \gets \alg{Encrypt}(pk, m);\ 
+(pk, sk) \gets \alg{KeyGen}();\ %
+c \gets \alg{Encrypt}(pk, m);\ %
 d \gets \alg{Decrypt}(sk, c)
 \]
 \end{definition}
+\end{crypto}
+\footnotetext{The design of letter-boxes varies a lot between countries; we have
+in mind the continental European style where letterboxes have a flap to insert letters and the owner can open a door on the letter-box with a key to retrieve letters.}
+
 
 \subsection{Security of encryption}
 
@@ -923,7 +964,7 @@ first obvious condition is that given a ciphertext, you should not be able to
 tell the contained message. Unfortunately this is not sufficient, here is an
 example why.
 Alice, a famous cryptographer, wishes to announce the birth of her child to her family while keeping its gender secret from the world at large for now. She
-encrypts the good news under her family's public keys and sends out the 
+encrypts the good news under her family's public keys and sends out the
 ciphertexts. Eve, an eavesdropper from the press, obtains Alice's ciphertexts.
 This should not matter --- this is exactly what encryption is for, after all.
 
@@ -978,6 +1019,7 @@ There are stronger notions of security for encryption that we will introduce at
 the appropriate point later in this work and explain how they relate to keeping
 encrypted votes private.
 
+\begin{crypto}
 \subsection{Homomorphic encryption}
 
 A homomorphic encryption scheme offers an additional algorithm \alg{Add} that takes two ciphertexts and a public key and produces a new ciphertext for the ``sum'' of the two messages in the original ciphertexts. We put ``sum'' in quotes because the principle can be applied to different operations such as multiplication as well.
@@ -996,10 +1038,10 @@ $c_1, c_2$ and outputs another ciphertext $s$.
 The correctness condition is that for any messages $m_1, m_2$ the following returns $d = m_1 + m_2$:
 \[
 \begin{array}{l}
-(pk, sk) \gets \alg{KeyGen}();\ 
-c_1 \gets \alg{Encrypt}(pk, m_1);\ 
+(pk, sk) \gets \alg{KeyGen}();\ %
+c_1 \gets \alg{Encrypt}(pk, m_1);\ %
 c_2 \gets \alg{Encrypt}(pk, m_2);\ \\
-c \gets \alg{Add}(pk, c_1, c_2);\ 
+c \gets \alg{Add}(pk, c_1, c_2);\ %
 d \gets \alg{Decrypt}(sk, c)
 \end{array}
 \]
@@ -1015,6 +1057,7 @@ of ciphertexts look just like ordinary ones and even the legitimate decryptor
 cannot tell a sum from a simple ciphertext. For example, if a ciphertext
 decrypts to $2$, the decryptor should not be able to tell if this was a direct
 encryption of $2$, a sum of encryptions of $0$ and $2$ or of $1$ and $1$ etc.
+\end{crypto}
 
 \begin{maths}
 \subsubsection{Prime-order groups.}
@@ -1067,10 +1110,10 @@ is $x$ and your public key is $y$.
 \end{definition}
 
 Two comments on this scheme are in order. First, the group has order $q$ but is
-represented as a subgroup of $\mathbb Z^*_p$. 
+represented as a subgroup of $\mathbb Z^*_p$.
 %This can lead to some confusion
 %in implementations --- Cortier and Smyth \cite{CS13} identified a bug in an
-%early version of the Helios voting system which mixed up the two. 
+%early version of the Helios voting system which mixed up the two.
 The rule to
 remember is, always reduce group elements modulo $p$ and integers (exponents)
 modulo $q$. This is why you pick your secret key from $\mathbb Z_q$ (it's an
@@ -1136,7 +1179,15 @@ Helios, which we will replicate in our minivoting scheme as a first step towards
 constructing Helios.
 \end{helios}
 
-\textcolor{red}{TODO --- Paillier?}
+\subsubsection{Other homomorphic schemes.}
+Besides ElGamal, there are numerous other homomorphic encryption schemes.
+The DLIN scheme of Boneh et al. \cite {BBS04} works on similar principles to
+ElGamal but uses a different security assumptioni and is thus applicable to
+different kinds of groups. The Paillier scheme \cite{P99} operates in
+composite-order RSA-type groups and offers additive instead of multiplicative
+homomoprhism, but is much less efficient than ElGamal. There are also many
+extensions of ElGamal such as Signed ElGamal (a.k.a. TDH0) and TDH2 \cite{SG98}
+from which an ElGamal ciphertext with homomorphic properties can be extracted.
 
 \subsection{Minivoting}
 
@@ -1223,6 +1274,7 @@ minivoting scheme has ballot privacy against observers.
 
 In particular this holds for the minivoting scheme based on ElGamal.
 
+\begin{crypto}
 \subsection{Threshold encryption}
 
 Minivoting used a single authority which is bad for two reasons. First, a
@@ -1260,12 +1312,13 @@ The correctness condition is that for any message $m$ and any set $I$ of at
 least $k$ authorities, the following yields $d = m$:
 \[ \begin{array}{l}
 ((pk_1, \ldots, pk_n), (sk_1, \ldots, sk_n)) \gets \alg{KeyGen}(); \\
-pk \gets \alg{CombineKey}(pk_1, \ldots, pk_n);\ 
+pk \gets \alg{CombineKey}(pk_1, \ldots, pk_n);\ %
 c \gets \alg{Encrypt}(pk, m); \\
-\textrm{for } i \in I:\ d_i \gets \alg{DecryptShare}(sk_i, c);\ 
+\textrm{for } i \in I:\ d_i \gets \alg{DecryptShare}(sk_i, c);\ %
 d \gets \alg{Combine}(c, \{d_i\}_{i \in I});
 \end{array} \]
 \end{definition}
+\end{crypto}
 
 \subsubsection{Threshold ElGamal for $k = n$.}
 Here is an implementation of threshold encryption for $k = n$, i.e. all
@@ -1288,7 +1341,7 @@ then simply generates an ElGamal keypair under these parameters.
 \item[\alg{CombineKey}]
 Take all $n$ shares $pk_1, \ldots, pk_n$
 %and their proofs and check that all
-%proofs verify, otherwise output $\bot$ and halt. Then 
+%proofs verify, otherwise output $\bot$ and halt. Then
 and multiply them together:
 $pk \gets \prod_{i=1}^n pk_i \pmod{p}$.
 
@@ -1305,7 +1358,7 @@ $pk \gets \prod_{i=1}^n pk_i \pmod{p}$.
 On input a ciphertext $c = (a, b)$ and a set of $n$ decryption shares
 $\{d_i\}_{i=1}^n$
 % with their associated proofs, check that all the proofs verify
-%and return $\bot$ if they do not. Then, 
+%and return $\bot$ if they do not. Then,
 set $d := b / \prod_{i=1}^n d_i
 \pmod{p}$.
 \end{description}
@@ -1349,6 +1402,7 @@ correct ballot. ``Zero-knowledge'' means that these proofs reveal nothing
 beyond that the ballot is correct. In particular, a proof that your ballot is
 correct does not leak your vote.
 
+\begin{crypto}
 \subsection{Zero-knowledge proofs}
 
 Zero-knowledge proofs\footnotemark are tools that allow you to prove that you
@@ -1361,13 +1415,14 @@ Chaum-Pedersen \cite{CP92} and disjunctive Chaum-Pedersen (DCP) protocols.
 \footnotetext{Formally, one can distinguish zero-knowledge ``proofs'' from
 ``arguments'' and ``proofs of knowledge'' from ``proofs of facts''. We ignore
 these distinctions here.}
+\end{crypto}
 
 \begin{helios}
 \subsubsection{Proofs in Helios.}
 Helios uses zero-knowledge proofs in three ways:
 \vspace{6pt}
 
-\hspace{-12pt}\ 
+\hspace{-12pt}\ %
 \begin{minipage}{0.8\textwidth}
 \begin{itemize}
 \item Each voter proves that she has cast a ballot for a valid vote, without
@@ -1641,7 +1696,7 @@ In the notation that we have just introduced, you have to show knowledge of
 ( a^x \pmod{p}, g^x \pmod{p})
 \]
 this function is conveniently also linear. Here we start to see why linearity
-and vector spaces are the correct way to understand $\Sigma$-protocols 
+and vector spaces are the correct way to understand $\Sigma$-protocols
 abstractly: for the finite field $\mathbb F_q$, our function signature is
 $\phi: \mathbb Z_q \to G^2$, mapping integers (1-dimensional vectors) into
 2-dimensional vectors over the group $G$.
@@ -1652,7 +1707,7 @@ correct:
 \begin{enumerate}
 \item Inputs: ciphertext $(a, b)$, public key share $pk_i$, secret key share
 $sk_i$.
-\item Pick a random $r$ from $\mathbb Z_q$. Compute 
+\item Pick a random $r$ from $\mathbb Z_q$. Compute
 \[
 (u, v) := \phi(r) = (a^r \pmod{p}, g^r \pmod{p})
 \]
@@ -1699,8 +1754,8 @@ in the exponential version used by Helios, can be expressed by the formula
 \[
 c = \phi(m, r) := (g^r \pmod{p}, g^m pk^r \pmod{p})
 \]
-which is linear in $m$ and $r$ as a function with signature 
-$\phi: (\mathbb Z_q)^2 \to G^2$ 
+which is linear in $m$ and $r$ as a function with signature
+$\phi: (\mathbb Z_q)^2 \to G^2$
 where $g, p, q$ and $pk$ are taken to be constants.
 This immediately yields a $\Sigma$-protocol to prove knowledge of your vote and
 randomness but does not prove that your vote $m$ lies in a particular range.
@@ -2254,6 +2309,7 @@ bug in the implementation of the proofs.}
 
 % optional?
 \section{Mix-nets}
+\label{sec:mixnet}
 
 In this final section we give a brief overview of mix-nets, the other main
 technique (beside blind signatures and homomorphic encryption) to achieve
@@ -2364,20 +2420,26 @@ R. Cramer.
 Modular Design of Secure yet Practical Cryptographic Protocols.
 PhD thesis, University of Amsterdam, 1996.
 
-\bibitem[BPW12a]{BPW12a}
-D. Bernhard, O. Pereira and B. Warinschi.
-On Necessary and Sufficient Conditions for Private Ballot Submission.
-Eprint, \url{eprint.iacr.org/2012/236}
+\bibitem[SG98]{SG98}
+V. Shoup and R. Gennaro.
+Securing Threshold Cryptosystems Agains Chosen-Ciphertext Attack.
+In: Advances in Cryptology (Eurocrypt '98), LNCS 1403, pages 1--16, 1998.
 
-\bibitem[BPW12b]{BPW12b}
-D. Bernhard, O. Pereira and B. Warinschi.
-How Not to Prove Yourself: Pitfalls of Fiat-Shamir and Applications to Helios.
-In: Advances in Cryptology --- Asiacrypt '12, LNCS 7658, pages 626--643, 2012.
+\bibitem[P99]{P99}
+P. Paillier.
+Public-Key Cryptosystems Based on Composite Degree Residuosity Classes.
+In: Advances in Cryptology (Eurocrypt '99), LNCS 1592, pages
+223--238, 1999.
 
 \bibitem[BS99]{BS99}
 M. Bellare and A. Sahai.
 Non-Malleable Encryption: Equivalence between Two Notions, and an Indisinguishability-Based Characterization.
 In: Advances in Cryptology --- CRYPTO '99, LNCS 1666, pages 519--536, 1999.
+
+\bibitem[BBS04]{BBS04}
+D. Boneh, X. Boyen and H. Shacham.
+Short Group Signatures.
+In: Advances in Cryptology (Crypto '04), LNCS 3152, pages 41--55, 2004.
 
 \bibitem[BC+11]{BCPSW11}
 D. Bernhard, V. Cortier, O. Pereira, B. Smyth and B. Warinschi.
@@ -2388,6 +2450,16 @@ In: Proceedings of ESORICS '11, LNCS 6879, pages 335--354, 2011.
 D. Schr\"oder and D. Unruh.
 Security of Blind Signatures Revisited.
 eprint, report 2011/316.
+
+\bibitem[BPW12a]{BPW12a}
+D. Bernhard, O. Pereira and B. Warinschi.
+On Necessary and Sufficient Conditions for Private Ballot Submission.
+Eprint, \url{eprint.iacr.org/2012/236}
+
+\bibitem[BPW12b]{BPW12b}
+D. Bernhard, O. Pereira and B. Warinschi.
+How Not to Prove Yourself: Pitfalls of Fiat-Shamir and Applications to Helios.
+In: Advances in Cryptology --- Asiacrypt '12, LNCS 7658, pages 626--643, 2012.
 
 \bibitem[BS13]{BS13}
 D. Bernhard and B. Smyth.
