@@ -2276,17 +2276,25 @@ This property is satisfied\footnotemark.
 work --- the current (v3) Helios does not satisfy ballot verifiability due to a
 bug in the implementation of the proofs.}
 
-\section{Putting it all together}
+As the reader will have noted, this too is an informal analysis --- no formal
+model for verifiability of Helios-type schemes\footnotemark exists yet, in
+contrast to ballot privacy. Creating a suitable model and proving Helios secure
+in such a model (or finding an attack) is one of the open challenges of
+cryptographic voting.
 
-% optional?
+\footnotetext{There is a model for verifiability by Kuesters et al.
+\cite{KTV11} but it coniders voting schemes from a highly abstract point of
+view and has, to our knowledge, never been successfully applied to a
+fully cryptographic scheme such as Helios.}
+
 \section{Mix-nets}
 \label{sec:mixnet}
 
-In this final section we give a brief overview of mix-nets, the other main
-technique (beside blind signatures and homomorphic encryption) to achieve
-private and verifiable cryptographic voting schemes. An advantage of mix-nets
-over homomorphic voting is that they can handle arbitrary ballot formats
-including write-in votes.
+In this section we give a brief overview of mix-nets, the other main technique
+(beside blind signatures and homomorphic encryption) to achieve private and
+verifiable cryptographic voting schemes. An advantage of mix-nets over
+homomorphic voting is that they can handle arbitrary ballot formats including
+write-in votes.
 
 Suppose that every voter encrypts their vote with normal ElGamal (not the
 exponential variant) and posts the ciphertext on the board, along with some
@@ -2339,6 +2347,21 @@ the pre-computed values can then be applied more efficiently to the ciphertexts
 forming the ballots in an ``online'' phase, returning the permuted and
 rerandomised ballots and the proof of correct mixing.
 
+\section{Conclusion}
+
+We have presented several cryptographic schemes and techniques for voting,
+introduced the building blocks from which they are constructed and given an
+overview of how cryptographers work with security properties and models. the
+state of the art is that we have (albeit imperfect) models for ballot privacy
+and proofs for that the (fixed) Helios scheme satisfies these models; while
+these models and proofs were developed, their authors discovered subtle
+problems with the existing Helios which shows the importance of a detailed and
+formal approach to security. While Helios is widely believed to be verifiable,
+which is one of its design goals if not the key selling point, a formal model
+in which this claim can be justified has not been published at the time of
+writing.
+
+\needspace{4\baselineskip}
 \begin{thebibliography}{XXX11}
 
 \bibitem[DH76]{DH76}
@@ -2421,6 +2444,11 @@ In: Proceedings of ESORICS '11, LNCS 6879, pages 335--354, 2011.
 D. Schr\"oder and D. Unruh.
 Security of Blind Signatures Revisited.
 eprint, report 2011/316.
+
+\bibitem[KTV11]{KTV11}
+R. Küsters, T. Truderung and A. Vogt.
+Verifiability, Privacy, and Coercion-Resistance: New Insights from a Case Study.
+IEEE Symposium on Security and Privacy (S\&P '11), IEEE Computer Society, 2011.
 
 \bibitem[BPW12a]{BPW12a}
 D. Bernhard, O. Pereira and B. Warinschi.
