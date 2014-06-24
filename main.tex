@@ -38,10 +38,23 @@
 \author{David Bernhard and Bogdan Warinschi}
 \institute{University of Bristol, England}
 
+
+
 \begin{document}
+
+
+
 
 \maketitle
 
+\begin{abstract}
+This lecture notes survey some of the main ideas and techniques used in cryptographic voting systems. 
+The write-up is geared towards readers with little knowledge of cryptography and it focuses on the broad principles that guide the design and analysis of cryptographic systems, especially the need for properly designed security models.
+
+We use a system proposed by Fujisaki, Okamoto and Ohta as starting example to introduce some basic building blocks and desirable security properties.  We then slowly build towards a comprehensive description of the Helios voting system, one of the few systems deployed in practice and briefly discuss a few of its security properties. 
+\end{abstract}
+
+\newpage
 \let\oldclearpage\clearpage
 \let\clearpage\relax
 \setcounter{tocdepth}{2}
@@ -50,14 +63,49 @@
 \let\clearpage\oldclearpage
 \clearpage
 
+
+
+
 \section{Introduction}
+Voting is the single most important mechanism for democracy and its effectiveness increases with the level of voter participation.    
+One solution being considered for the problem of decrease voting turn-out is the use of remote voting systems.  The increased comfort that permits voters to cast their ballot from anywhere and at any time (as long as they have an internet connection) should translate in higher voter participation and even reduce the costs of running elections.  
+
+Despite steady progress in the quest for electronic voting schemes\footnote{We remark that in this write-up we use the term electronic voting to refer to online voting schemes. The term is also used to refer to kiosk-voting that involves some form of digital recording machine, potentially combined with other mechanisms like optical scanners, paper-based recording, etc. } and some recent successes (e.g. Estonia has recently introduced Internet voting on a national scale), electronic voting is not yet widely deployed.   There are many obstacles that need to overcome, from questions on the design (inventing appropriate cryptographic primitives and protocols), deployment (e.g. dealing with malware on user's voting device) and usability (e.g. dealing with social inertia, public trust, etc.). 
+
+Devising appropriate cryptographic mechanisms seems to have reached a fairly stable state where the desired functionality and levels of security desired from the components of a voting system have been clearly identified, and research tackles efficiency improvements on the components and designs with stronger security guarantees.  
+
+Informal security requirements on voting systems 
+
+There has also been a recent thrust towards providing security models 
+
+It is fair to say that progress on the cryptographic  primitives for voting has more or less stabilized to the point where we already have at our disposal a number of efficient and secure tools that achieve 
+
+
+While we do not rule out innovations on this front, 
+
+Security properties. 
+
+
+Primitives. 
+
+
+
+that underlie voting systems have however 
+
+
+
+Electronic voting is one area where cryptography makes a visible societal impact. 
+
 
 Our aim is to present voting from a cryptographer's point of view. We will state
 some security properties that one could desire of a voting scheme and present
 methods to achieve these properties using cryptography.
 
 Sections giving mathematical background information are marked with a frame and
-a large $\Sigma$. Sections giving applications specific to the Helios voting
+a large $\Sigma$. 
+Sections that introduce basic cryptographic primitives are marked with a lock symbol (\raisebox{-3pt}{\includegraphics[height=14pt]{lock}}).
+
+Sections giving applications specific to the Helios voting
 scheme are marked with a \Sun\ symbol. Sections introducing cryptographic
 concepts are marked with a padlock symbol.
 
@@ -509,9 +557,7 @@ the time, the pair $(N, d)$ suffices to work with though.
 \end{maths}
 
 \subsection{A blind signature based on RSA}
-
-To sign a message $m \in \mathbb Z^*_N$ (without blinding) with an RSA private
-key $(N, d)$ and public key $(N, e)$, you compute
+We start with the construction of a digital signature  scheme, which then we show how to turn into a blind one.  The scheme is based on the RSA group described above and is as follows.   The private signing key is $(N, d)$ and public verification key is $(N, e)$.  To sign a message $m \in \mathbb Z^*_N$ (without blinding) with key $(N, d)$, one computes
 \[
 \alg{Sign}((N, d), m) := H(m)^d \pmod{N}
 \]
@@ -523,14 +569,13 @@ and to verify a signature $\sigma$, check that the following returns $1$:
 0, & \textrm{otherwise} & \\
 \end{array} \right.
 \]
-
-$H$ is a hash function that serves two purposes. First, it allows a signature of
+Here, $H$ is a hash function that serves two purposes. First, it allows a signature of
 constant size on a message of any length. Secondly, the hash function is a
 necessary part of the security of this construction: without it, you could take
 any value $x$, compute $y = x^e \pmod{N}$ and claim that $x$ is a signature on
 $y$.
 
-Chaum's blind signature has the user blind the message $m$ with a random value
+Chaum's blind signature has the user blind the message $m$ (or, more precisely, the value of $H(m)$) with a random value
 $r$ before sending it to the signer and strip this factor out again afterwards:
 
 \needspace{2\baselineskip}
