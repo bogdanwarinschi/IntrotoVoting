@@ -48,12 +48,13 @@
 \maketitle
 
 \begin{abstract}
-This lecture notes survey some of the main ideas and techniques used in cryptographic voting systems. 
+These lecture notes survey some of the main ideas and techniques used in cryptographic voting systems. 
 The write-up is geared towards readers with little knowledge of cryptography and it focuses on the broad principles that guide the design and analysis of cryptographic systems, especially the need for properly designed security models.
 
 We use a system proposed by Fujisaki, Okamoto and Ohta as starting example to introduce some basic building blocks and desirable security properties.  We then slowly build towards a comprehensive description of the Helios voting system, one of the few systems deployed in practice and briefly discuss a few of its security properties. 
 \end{abstract}
 
+\iffalse
 \newpage
 \let\oldclearpage\clearpage
 \let\clearpage\relax
@@ -62,52 +63,43 @@ We use a system proposed by Fujisaki, Okamoto and Ohta as starting example to in
 \tableofcontents
 \let\clearpage\oldclearpage
 \clearpage
-
+\fi
 
 
 
 \section{Introduction}
-Voting is the single most important mechanism for democracy and its effectiveness increases with the level of voter participation.    
-One solution being considered for the problem of decrease voting turn-out is the use of remote voting systems.  The increased comfort that permits voters to cast their ballot from anywhere and at any time (as long as they have an internet connection) should translate in higher voter participation and even reduce the costs of running elections.  
+%Voting is the single most important mechanism for democracy and its effectiveness increases with the level of voter participation.    
+A potential solution to the problem of decrease turn-out in elections is the use of remote voting systems.  The increased comfort that permits voters to cast their ballot from anywhere and at any time (as long as they have an internet connection) should translate in higher voter participation and even reduce the costs of running elections.  
+Just like with any advanced technology, bringing electronic voting\footnote{We remark that in this write-up we use the term electronic voting to refer to online voting schemes. The term is also used to refer to kiosk-voting that involves some form of digital recording machine, potentially combined with other mechanisms like optical scanners, paper-based recording, etc. } to widespread practice faces both technological and societal challenges. 
 
-Despite steady progress in the quest for electronic voting schemes\footnote{We remark that in this write-up we use the term electronic voting to refer to online voting schemes. The term is also used to refer to kiosk-voting that involves some form of digital recording machine, potentially combined with other mechanisms like optical scanners, paper-based recording, etc. } and some recent successes (e.g. Estonia has recently introduced Internet voting on a national scale), electronic voting is not yet widely deployed.   There are many obstacles that need to overcome, from questions on the design (inventing appropriate cryptographic primitives and protocols), deployment (e.g. dealing with malware on user's voting device) and usability (e.g. dealing with social inertia, public trust, etc.). 
+The latter is well illustrated by Norway's recent decision, that follows a couple of trials, not to expand internet voting to nationwide elections because of the impact that public's trust in this technology may have on the democratic process.  Related problems raised questions regarding the constitutionality of internet voting in Germany.   
+While the deployment and usability issues (e.g. dealing with malware on user's voting device, overcoming social inertia, gaining public trust) still need to be solved, it is fair to say that the cryptographic technology that goes into electronic voting is by now in a reasonably stable condition. In particular existing schemes build upon a powerful and versatile toolbox of cryptographic techniques which are combined to achieve the desired functionality and security.
 
-Devising appropriate cryptographic mechanisms seems to have reached a fairly stable state where the desired functionality and levels of security desired from the components of a voting system have been clearly identified, and research tackles efficiency improvements on the components and designs with stronger security guarantees.  
-
-Informal security requirements on voting systems 
-
-There has also been a recent thrust towards providing security models 
-
-It is fair to say that progress on the cryptographic  primitives for voting has more or less stabilized to the point where we already have at our disposal a number of efficient and secure tools that achieve 
+These notes survey some of the most commonly used cryptographic primitives used in electronic voting.  We explain and motivate the functionality and security they achieve through their use within electronic voting schemes.  In this context, perhaps the most important message we wish to convey is the crucial role that rigorous models play in the development of secure systems.  For protocols with complex security requirements, as is the case of electronic voting, models are necessary for understanding the security these protocols offer and for enabling rigorous security proofs.
+Most of the discussion is driven by two voting schemes from the literature, one of which is in current use.  We aim to provide a comprehensive overview of the latter.  
+%We briefly summarize the content of these notes and indicate 
 
 
-While we do not rule out innovations on this front, 
-
-Security properties. 
+These notes are intended for readers with little to no knowledge of cryptography, but who wish to understand some of the underpinnings of cryptographic voting. We assume some familiarity with basic abstract algebra and ease in using mathematics.  
 
 
-Primitives. 
+\paragraph{Primitives and models.}  One of the main goals of this write-up is to present the building blocks used in voting systems.  Our presentation is not exhaustive but it includes some of the most used primitives: digital and blind signatures, homomorphic encryption, threshold techniques and zero-knowledge proofs.   For each of the primitives we present a rigorous security model where we clarify what is an adversary, how it can interact with the primitive, and what constitutes a breach against the primitive.  To ease understanding, we find it useful to define the functionality and security of these primitives by analogy with systems which achieve similar levels of security in the physical world.  
+In addition, for increased clarity but at the expense of some precision, we chose not to give the typical fully formal cryptographic definitions. 
+
+We remark that, perhaps surprisingly, not all of the (many) security properties that voting systems should satisfy have formal definitions.  
+Indeed, most of the recent research on cryptographic voting focuses on the design of such models and the analysis of existing schemes. 
+In these notes we recall ballot privacy, a security notion that captures the idea that users' votes stay private.  In addition, we briefly comment on the equally important property of verifiability. 
+
+\paragraph{Instantiations and Helios.}
+For all of the primitives that we cover we show how they can be (securely) instantiated; each instantiation is preceded by the necessary mathematical background.   
+In particular, we show how to realize all of the primitives that go into the design of the Helios voting systems.   This is one of the few voting systems that are actually used in practice and serves as a good example.   
 
 
-
-that underlie voting systems have however 
-
-
-
-Electronic voting is one area where cryptography makes a visible societal impact. 
-
-
-Our aim is to present voting from a cryptographer's point of view. We will state
-some security properties that one could desire of a voting scheme and present
-methods to achieve these properties using cryptography.
-
-Sections giving mathematical background information are marked with a frame and
-a large $\Sigma$. 
-Sections that introduce basic cryptographic primitives are marked with a lock symbol (\raisebox{-3pt}{\includegraphics[height=14pt]{lock}}).
-
-Sections giving applications specific to the Helios voting
-scheme are marked with a \Sun\ symbol. Sections introducing cryptographic
-concepts are marked with a padlock symbol.
+\paragraph{Conventions.}  
+Sections giving mathematical background information are marked with a frame and a large $\Sigma$. 
+Sections that introduce basic cryptographic primitives are marked with a lock symbol (\raisebox{-3pt}{\includegraphics[height=14pt]{lock}}). Sections giving applications specific to the Helios voting
+scheme are marked with a \Sun\ symbol. 
+%Sections introducing cryptographic concepts are marked with a padlock symbol.
 
 \section{First steps}
 
