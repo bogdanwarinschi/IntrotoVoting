@@ -92,9 +92,9 @@ Indeed, most of the recent research on cryptographic voting focuses on the desig
 In these notes we recall ballot privacy, a security notion that captures the idea that users' votes stay private.  In addition, we briefly comment on the equally important property of verifiability. 
 
 \paragraph{Instantiations and Helios.}
-For all of the primitives that we cover we show how they can be (securely) instantiated; each instantiation is preceded by the necessary mathematical background.  
-In particular, we show how to realize all of the primitives that go into the design of the Helios voting systems.   This is one of the few voting systems that are actually used in practice and serves as a  example that illustrates many (if not all) of the concepts relevant to electronic voting.   
-Just like for the higher-level constructions we avoid giving proofs. 
+For all of the primitives that we cover we show how they can be (securely) instantiated; each instantiation is preceded by the necessary mathematical background.   
+In particular, we show how to realize all of the primitives that go into the design of the Helios voting systems, one of the few voting systems that are actually used in practice.
+We justify the design of this system via an incremental construction.  We start with a basic voting system which is functional but not secure, identify obvious attacks which we then defend against by using appropriate cryptographic techniques. The resulting design together with the instantiations of the different primitives that we present yield a scheme which has ballot privacy.  We briefly discuss its verifiability properties. 
 
 
 \paragraph{Conventions.}  
