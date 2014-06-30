@@ -1,3 +1,4 @@
+
 \documentclass[envcountsame]{llncs}
 %DB: presume this is the correct class
 
@@ -51,7 +52,7 @@
 These lecture notes survey some of the main ideas and techniques used in cryptographic voting systems. 
 The write-up is geared towards readers with little knowledge of cryptography and it focuses on the broad principles that guide the design and analysis of cryptographic systems, especially the need for properly designed security models.
 
-We use a system proposed by Fujisaki, Okamoto and Ohta as starting example to introduce some basic building blocks and desirable security properties.  We then slowly build towards a comprehensive description of the Helios voting system, one of the few systems deployed in practice and briefly discuss a few of its security properties. 
+We use a system proposed by Fujioka, Okamoto and Ohta as starting example to introduce some basic building blocks and desirable security properties.  We then slowly build towards a comprehensive description of the Helios voting system, one of the few systems deployed in practice and briefly discuss a few of its security properties. 
 \end{abstract}
 
 \iffalse
@@ -91,11 +92,13 @@ Indeed, most of the recent research on cryptographic voting focuses on the desig
 In these notes we recall ballot privacy, a security notion that captures the idea that users' votes stay private.  In addition, we briefly comment on the equally important property of verifiability. 
 
 \paragraph{Instantiations and Helios.}
-For all of the primitives that we cover we show how they can be (securely) instantiated; each instantiation is preceded by the necessary mathematical background.   
-In particular, we show how to realize all of the primitives that go into the design of the Helios voting systems.   This is one of the few voting systems that are actually used in practice and serves as a good example.   
+For all of the primitives that we cover we show how they can be (securely) instantiated; each instantiation is preceded by the necessary mathematical background.  
+In particular, we show how to realize all of the primitives that go into the design of the Helios voting systems.   This is one of the few voting systems that are actually used in practice and serves as a  example that illustrates many (if not all) of the concepts relevant to electronic voting.   
+Just like for the higher-level constructions we avoid giving proofs. 
 
 
 \paragraph{Conventions.}  
+To allow the reader to zoom-in on the parts that may be of more interest to him/her we separate and clearly indicate the following.
 Sections giving mathematical background information are marked with a frame and a large $\Sigma$. 
 Sections that introduce basic cryptographic primitives are marked with a lock symbol (\raisebox{-3pt}{\includegraphics[height=14pt]{lock}}). Sections giving applications specific to the Helios voting
 scheme are marked with a \Sun\ symbol. 
@@ -349,7 +352,7 @@ of increasing strength for the same class of scheme, rather than just go with
 the strongest known definition.
 For signature schemes in particular, some protocols use a construction called a
 one-time signature: a signer who has a personal signing key pair $(pk, sk)$ of
-some signature scheme generates, for each action that she perfoms in the
+some signature scheme generates, for each action that she performs in the
 protocol, a new key pair $(pk', sk')$ of a one-time signature scheme and uses
 $sk'$ to sign exactly one message whereas she signs the one-time public key
 $pk'$ under her long-term key $pk$. One reason why one might do such a
@@ -402,7 +405,7 @@ and an unblinding factor $u$ and outputs a signature $\sigma \gets
 verification key $vk$, a message $m$ and a signature $\sigma$ and outputs a bit
 $v \gets \alg{Verify}(vk, m, \sigma)$ that is 1 if the signature verifies.
 
-A blind singature scheme is correct if the following outputs $v = 1$ for any
+A blind signature scheme is correct if the following outputs $v = 1$ for any
 message $m$, i.e. a correctly generated signature verifies:
 \[
 \begin{array}{l}
@@ -586,8 +589,7 @@ Let us check correctness of the blind signature. We have
 = 1 \cdot 1^e = 1 \pmod{N}
 \]
 Note that $\sigma$ is exactly the standard RSA signature on $m$ for verification
-key $(N, e)$. The security model and analysis for this scheme is due to Bellare
-and Palacio \cite{BP??}, we omit it in this work.
+key $(N, e)$. The analysis for this scheme is due to Bellare et al. and \cite{BNPS01} and we omit it in this work. 
 
 \cryptosubsection{Commitment schemes}
 
@@ -669,7 +671,7 @@ $\alg{Open}(p, c, m', k')$ return 1.
 
 Commitment is one of the few cryptographic primitives that can be built securely
 against attackers with unlimited resources, however a commitment scheme can only
-be either ``perfectly hiding'' or ``prefectly binding'', not both at once.
+be either ``perfectly hiding'' or ``perfectly binding'', not both at once.
 All decent commitment schemes are both hiding and binding against
 computationally bounded attackers.
 
@@ -991,7 +993,7 @@ Eve can encrypt both her guessed messages herself under these public keys and
 check if either of her ciphertexts matches the one sent by Alice. If so, Eve has
 effectively broken Alice's secret.
 
-This story gives use two more requirements: given a ciphertext and two candidate
+This story gives rise to two more requirements: given a ciphertext and two candidate
 messages, you should be unable to guess which of the two messages was encrypted;
 given two ciphertexts you should not be able to tell if they encrypt the same
 message or not. The first common security requirement for encryption is known as
@@ -2388,7 +2390,7 @@ rerandomised ballots and the proof of correct mixing.
 
 We have presented several cryptographic schemes and techniques for voting,
 introduced the building blocks from which they are constructed and given an
-overview of how cryptographers work with security properties and models. the
+overview of how cryptographers work with security properties and models. The
 state of the art is that we have (albeit imperfect) models for ballot privacy
 and proofs for that the (fixed) Helios scheme satisfies these models; while
 these models and proofs were developed, their authors discovered subtle
@@ -2400,6 +2402,8 @@ writing.
 
 \needspace{4\baselineskip}
 \begin{thebibliography}{XXX11}
+
+
 
 \bibitem[DH76]{DH76}
 W. Diffie and M. Hellman.
@@ -2439,7 +2443,7 @@ In: Advances in Cryptology --- CRYPTO' 92, LNCS 740, pages 89--105, 1992.
 \bibitem[FOO92]{FOO92}
 A. Fujioka, T. Okamoto and K. Ohta.
 A Practical Secret Voting Scheme for Large Scale Elections.
-In: ???
+In: Advances in Cryptology -- AUSCRYPT' 92, LNCS 718, pages 244--251, 1992.
 
 \bibitem[BR93]{BR93}
 M. Bellare and P. Rogaway.
@@ -2466,6 +2470,11 @@ In: Advances in Cryptology (Eurocrypt '99), LNCS 1592, pages
 M. Bellare and A. Sahai.
 Non-Malleable Encryption: Equivalence between Two Notions, and an Indisinguishability-Based Characterization.
 In: Advances in Cryptology --- CRYPTO '99, LNCS 1666, pages 519--536, 1999.
+
+\bibitem[BNPS03]
+M. Bellare, C. Namprempre, D. Pointcheval and M. Semanko.
+The One-More-RSA-Inversion Problem and the ASecurity of Chaum's Blind Signature Scheme.
+In: J. of Cryptology,  vol. 16, no. 3, pages 185--215, 2003.
 
 \bibitem[BBS04]{BBS04}
 D. Boneh, X. Boyen and H. Shacham.
